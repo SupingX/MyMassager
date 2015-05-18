@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res/com.mycj.mymassager"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/main_background_color"
+    android:orientation="vertical"
+    android:weightSum="5" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="6dp"
+        android:layout_weight="1.0"
+        android:baselineAligned="false"
+        android:gravity="center"
+        android:orientation="horizontal" >
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="主机"
+                    android:textColor="@color/grey_light"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_connect_state"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="未连接蓝牙设备..."
+                    android:textColor="@color/red"
+                    android:textSize="14sp" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:orientation="horizontal" >
+
+                <CheckBox
+                    android:id="@+id/cb_model_main"
+                    android:layout_width="80dp"
+                    android:layout_height="40dp"
+                    android:button="@drawable/selector_model_power"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+
+                <ImageView
+                    android:id="@+id/iv_switch_master_fuzai"
+                    android:layout_width="40dp"
+                    android:layout_height="20dp"
+                    android:layout_marginLeft="10dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/ic_electload"
+                    />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" >
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="从机"
+                    android:textColor="@color/grey_light"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_connect"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:text="返回重连"
+                    android:textColor="@drawable/selector_conntect"
+                    android:textSize="14sp" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:orientation="horizontal" >
+
+                <ImageView
+                    android:id="@+id/iv_switch_slave_fuzai"
+                    android:layout_width="40dp"
+                    android:layout_height="20dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/ic_electload" />
+
+                <CheckBox
+                    android:id="@+id/cb_model_affiliate"
+                    android:layout_width="80dp"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:button="@drawable/selector_model_power"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="3"
+        android:baselineAligned="false"
+        android:gravity="center"
+        android:orientation="horizontal" >
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:gravity="center" >
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical" >
+
+                <ImageView
+                    android:id="@+id/img_main_add"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/selector_add" />
+
+                <com.mycj.mymassager.view.VerticalSeekBar
+                    android:id="@+id/seekbar_master"
+                    android:layout_width="30dp"
+                    android:layout_height="180dp"
+                    android:max="20"
+                    android:progress="1"
+                    android:progressDrawable="@drawable/seekbar_drawable"
+                    app:thumb_textSize="13sp" />
+
+                <ImageView
+                    android:id="@+id/img_main_minus"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/selector_minus" />
+            </LinearLayout>
+
+            <RadioGroup
+                android:id="@+id/radio_main"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical" >
+
+                <RadioButton
+                    android:id="@+id/rb_main_master"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|center"
+                    android:button="@drawable/selector_massager"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+
+                <RadioButton
+                    android:id="@+id/rb_main_acup"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginTop="16dp"
+                    android:button="@drawable/selector_acup"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+
+                <RadioButton
+                    android:id="@+id/rb_main_hammer"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="bottom|center"
+                    android:button="@drawable/selector_hammer"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <View
+            android:layout_width="1.0px"
+            android:layout_height="match_parent"
+            android:background="#FFDADADA" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:baselineAligned="false"
+            android:gravity="center" >
+
+            <RadioGroup
+                android:id="@+id/rg_slave"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical" >
+
+                <RadioButton
+                    android:id="@+id/rb_slave_master"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="top|center"
+                    android:button="@drawable/selector_massager"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+
+                <RadioButton
+                    android:id="@+id/rb_slave_acup"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="center"
+                    android:layout_marginBottom="16dp"
+                    android:layout_marginTop="16dp"
+                    android:button="@drawable/selector_acup"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+
+                <RadioButton
+                    android:id="@+id/rb_slave_hammer"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_gravity="bottom|center"
+                    android:button="@drawable/selector_hammer"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name" />
+            </RadioGroup>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical" >
+
+                <ImageView
+                    android:id="@+id/img_slave_add"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/selector_add" />
+
+                <com.mycj.mymassager.view.VerticalSeekBar
+                    android:id="@+id/seekbar_slaver"
+                    android:layout_width="30dp"
+                    android:layout_height="180dp"
+                    android:max="20"
+                    android:progress="1"
+                    android:progressDrawable="@drawable/seekbar_drawable"
+                    app:thumb_textSize="13sp" />
+
+                <ImageView
+                    android:id="@+id/img_slave_minus"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/selector_minus" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginBottom="6dp"
+        android:layout_weight="1.0"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="3" >
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="horizontal" >
+
+            <ImageView
+                android:id="@+id/img_start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/selector_start" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_timer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="00:00"
+            android:textColor="@color/chenghong"
+            android:textSize="24sp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <ImageView
+                android:id="@+id/img_stop"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/selector_stop" />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>

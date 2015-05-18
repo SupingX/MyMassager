@@ -1,0 +1,68 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context="${packageName}.${activityClass}" >
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:padding="10dp" >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:text="电机开关"
+            android:textSize="16sp" />
+
+        <CheckBox
+            android:id="@+id/cb_reminder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:button="@drawable/selector_switch_checkbox"
+            android:checked="false"
+            android:clickable="true" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/tv_reconnect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:padding="20dp"
+        android:text="返回重连"
+        android:textColor="@drawable/selector_conntect"
+        android:textSize="20sp" />
+
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:layout_width="300dip"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:maxHeight="20dp"
+        android:minHeight="20dp"
+        android:progressDrawable="@drawable/seekbar_drawable"
+        android:thumb="@drawable/ic_thumb"
+        android:thumbOffset="0dp" >
+    </SeekBar>
+    
+ <com.mycj.mymassager.view.VerticalSeekBar2
+                    android:id="@+id/vertical_master_seekbar"
+                    android:layout_width="30dp"
+                    android:layout_height="160dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_marginTop="6dp"
+                    android:max="20"
+                    android:progress="1"
+                    android:progressDrawable="@drawable/seekbar_drawable"
+                    />
+
+</RelativeLayout>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="text_color_selected">#ff3498DB</color>
+    <color name="text_color_unselected">#ff929292</color>
+    <color name="red">#DE532C</color>
+    <color name="blue">#3498DB</color>
+    <color name="green">#2ECC71</color>
+    <color name="green_1">#2ECC71</color>
+    
+    
+    <color name="blue_light">#550070AA</color>
+    <color name="grey">#7B7360</color>
+    <color name="grey_light">#557B7360</color>
+    
+    <!-- 橙红 -->
+    <color name="chenghong">#F39C12</color>
+     <color name="main_background_color">#FFF0EFF4</color>
+    <!--  底部tab -->
+    <color name="bottom_tab_split_line">#929292</color>
+    <color name="bottom_background">#F6F6F8</color>
+    
+    <!--  massager -->
+      <color name="light_black_color">#FF34495E</color>
+	
+</resources>
