@@ -34,7 +34,6 @@ public class ConnectActivity extends Activity {
 	private TextView textViewSkip;
 	private ListView listViewBle;
 	private ProgressBar mProgressBar;
-	private BleService mBleService;
 	private BleDevicesAdapter mBleDevicesAdapter;
 	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 		@Override
@@ -89,24 +88,26 @@ public class ConnectActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_connect);
-		initViews();
 	
-		mBleService = ((BleApplication) getApplication()).getBleService();
-		Log.d(TAG, mBleService + "");
+		initViews();
 		mBlueToothList = new ArrayList<>();
 		mBleDevicesAdapter = new BleDevicesAdapter();
 		listViewBle.setAdapter(mBleDevicesAdapter);
-		
 		setListener();
 	}
-
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+	}
 	@Override
 	protected void onResume() {
 		super.onResume();
 		registerReceiver(mBroadcastReceiver, BleService.getIntentFilter());
-		mBleService.scanBleDevices(true);
+		((BleApplication) getApplication()).getBleService().scanBleDevices(true);
+	
 	}
-
+	
 	@Override
 	protected void onStop() {
 		super.onStop();
@@ -121,11 +122,12 @@ public class ConnectActivity extends Activity {
 	}
 
 	public void setListener() {
-		//连接蓝牙
+		// 连接蓝牙
 		listViewBle.setOnItemClickListener(new OnItemClickListener() {
 			@Override
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
+				((BleApplication) getApplication()).getBleService().scanBleDevices(false);
 				final BluetoothDevice device = mBlueToothList.get(position);
 				if (device != null) {
 					Toast.makeText(getApplicationContext(),
@@ -133,38 +135,43 @@ public class ConnectActivity extends Activity {
 					new Handler().postDelayed(new Runnable() {
 						@Override
 						public void run() {
-							mBleService.connectBleDevice(device);
-							Intent intent = new Intent(ConnectActivity.this,MainActivity.class);
+							((BleApplication) getApplication()).getBleService().connectBleDevice(device);
+							Intent intent = new Intent(ConnectActivity.this,
+									MainActivity.class);
 							Bundle b = new Bundle();
 							b.putString("device", device.getName());
 							intent.putExtras(b);
-							setResult(RESULT_OK, intent);
+							startActivity(intent);
 							finish();
 						}
 					}, 1000);
 				}
 			}
 		});
-		
-		//刷新
+
+		// 刷新
 		textViewFresh.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
-				mBleService.scanBleDevices(true);
+//				mBleService = ((BleApplication) getApplication()).getBleService();
+//				System.out.println("ble service " + mBleService);
+//				mBleService.scanBleDevices(true);
+				((BleApplication) getApplication()).getBleService().scanBleDevices(true);
 			}
 		});
-		
-		//跳过
+
+		// 跳过
 		textViewSkip.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
-				mBleService.scanBleDevices(false);
-				Intent intent = new Intent(ConnectActivity.this,MainActivity.class);
+				((BleApplication) getApplication()).getBleService().scanBleDevices(false);
+				Intent intent = new Intent(ConnectActivity.this,
+						MainActivity.class);
 				startActivity(intent);
 				finish();
-				
+
 			}
 		});
 	}

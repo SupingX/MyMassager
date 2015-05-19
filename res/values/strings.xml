@@ -4,5 +4,6 @@
     <string name="app_name">MyMassager</string>
     <string name="hello_world">Hello world!</string>
     <string name="title_activity_connect">ConnectActivity</string>
+    <string name="title_activity_front">FrontActivity</string>
 
 </resources>

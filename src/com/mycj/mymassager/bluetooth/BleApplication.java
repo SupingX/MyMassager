@@ -39,8 +39,10 @@ public class BleApplication extends Application {
 		} else {
 			bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
 		}
+		
 	}
-
+	
+	
 	@Override
 	public void onTerminate() {
 		// TODO Auto-generated method stub

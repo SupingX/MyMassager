@@ -126,7 +126,7 @@ public class DataUtil {
 	}
 
 	/**
-	 * 根据传入的2个字节4位16进制字符比如FFFF, 计算返回int类型的绝对值
+	 * 根据传入的2个字节2位16进制字符比如FFFF, 计算返回int类型的绝对值
 	 */
 	public static int hexStringX2bytesToInt(String hexString) {
 		return binaryString2int(hexString2binaryString(hexString));
@@ -148,7 +148,8 @@ public class DataUtil {
 		}
 		return bString;
 	}
-
+	
+	
 	/**
 	 * 二进制转为10进制 返回int
 	 */
@@ -173,92 +174,45 @@ public class DataUtil {
 
 		return result;
 	}
-
+	
+ //二进制转十六进制
+	public static String BinaryToHex(String s){
+		return Long.toHexString(Long.parseLong(s,2));
+		}
+		//十六进制转二进制
+	public static String HexToBinary(String s){
+		return Long.toBinaryString(Long.parseLong(s, 16));
+		}
+	
 	/**
-	 * 
-	 * 二进制转为16进制
-	 */
-	public static String binaryString2hexString(String bString) {
-		if (bString == null || bString.equals("") || bString.length() % 8 != 0) {
-			return null;
-		}
-		StringBuffer tmp = new StringBuffer();
-		int iTmp = 0;
-		for (int i = 0; i < bString.length(); i += 4) {
-			iTmp = 0;
-			for (int j = 0; j < 4; j++) {
-				iTmp += Integer.parseInt(bString.substring(i + j, i + j + 1)) << (4 - j - 1);
-			}
-			tmp.append(Integer.toHexString(iTmp));
-		}
-		return tmp.toString();
-	}
+	 * int n1 = 14;
+//十进制转成十六进制：
+Integer.toHexString(n1);
+//十进制转成八进制
+Integer.toOctalString(n1);
+//十进制转成二进制
+Integer.toBinaryString(12);
 
-	/**
-	 * 手机-->主机 强度数据协议
-	 * 
-	 * @param progress
-	 * @return
-	 */
-	public static final String getStrengthHexToMaster(int strength) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("F2");
-		String hex = Integer.toHexString(strength);
-		if (hex.length() == 1) {
-			hex = "0" + hex;
-		}
-		sb.append(hex);
-		return sb.toString();
-	}
+//十六进制转成十进制
+Integer.valueOf("FFFF",16).toString();
+//十六进制转成二进制
+Integer.toBinaryString(Integer.valueOf("FFFF",16));
+//十六进制转成八进制
+Integer.toOctalString(Integer.valueOf("FFFF",16));
 
-	/**
-	 * 手机-->主机 频率数据协议
-	 * 
-	 * @param progress
-	 * @return
-	 */
-	public static final String getFrequencyHexToMaster(int frequency) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("F3");
-		String hex = Integer.toHexString(frequency);
-		if (hex.length() == 1) {
-			hex = "0" + hex;
-		}
-		sb.append(hex);
-		return sb.toString();
-	}
+//八进制转成十进制
+Integer.valueOf("576",8).toString();
+//八进制转成二进制
+Integer.toBinaryString(Integer.valueOf("23",8));
+//八进制转成十六进制
+Integer.toHexString(Integer.valueOf("23",8));
 
-	/**
-	 * 手机-->从机 强度数据协议
-	 * 
-	 * @param progress
-	 * @return
-	 */
-	public static final String getStrengthHexToSlave(int strength) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("F5");
-		String hex = Integer.toHexString(strength);
-		if (hex.length() == 1) {
-			hex = "0" + hex;
-		}
-		sb.append(hex);
-		return sb.toString();
-	}
 
-	/**
-	 * 手机-->从机 频率数据协议
-	 * 
-	 * @param progress
-	 * @return
+//二进制转十进制
+Integer.valueOf("0101",2).toString();
+//二进制转八进制
+Integer.toOctalString(Integer.parseInt("0101", 2));
+//二进制转十六进制
+Integer.toHexString(Integer.parseInt("0101", 2));
 	 */
-	public static final String getFrequencyHexToSlave(int frequency) {
-		StringBuffer sb = new StringBuffer();
-		sb.append("F6");
-		String hex = Integer.toHexString(frequency);
-		if (hex.length() == 1) {
-			hex = "0" + hex;
-		}
-		sb.append(hex);
-		return sb.toString();
-	}
 }

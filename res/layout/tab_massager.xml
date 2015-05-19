@@ -28,6 +28,7 @@
                 android:layout_height="wrap_content" >
 
                 <TextView
+                          android:id="@+id/tv_main"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
@@ -61,14 +62,14 @@
                     android:clickable="true"
                     android:contentDescription="@string/app_name" />
 
-                <ImageView
-                    android:id="@+id/iv_switch_master_fuzai"
+                <CheckBox
+                    android:id="@+id/cb_main_fuzai"
                     android:layout_width="40dp"
                     android:layout_height="20dp"
                     android:layout_marginLeft="10dp"
                     android:clickable="true"
                     android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_electload"
+                    android:button="@drawable/ic_electload"
                     />
             </LinearLayout>
         </LinearLayout>
@@ -86,6 +87,7 @@
                 android:layout_gravity="center" >
 
                 <TextView
+                            android:id="@+id/tv_slave"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
@@ -113,13 +115,13 @@
                 android:gravity="center"
                 android:orientation="horizontal" >
 
-                <ImageView
-                    android:id="@+id/iv_switch_slave_fuzai"
+                <CheckBox
+                    android:id="@+id/cb_slave_fuzai"
                     android:layout_width="40dp"
                     android:layout_height="20dp"
                     android:clickable="true"
                     android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_electload" />
+                    android:button="@drawable/ic_electload" />
 
                 <CheckBox
                     android:id="@+id/cb_model_affiliate"
@@ -221,6 +223,7 @@
         </LinearLayout>
 
         <View
+             android:id="@+id/line"
             android:layout_width="1.0px"
             android:layout_height="match_parent"
             android:background="#FFDADADA" />

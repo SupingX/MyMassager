@@ -1,6 +1,11 @@
 package com.mycj.mymassager.bluetooth;
 
+import java.util.List;
 import java.util.UUID;
+
+import com.mycj.mymassager.entity.MachineStatus;
+import com.mycj.mymassager.util.DataUtil;
+
 import android.annotation.SuppressLint;
 import android.app.Service;
 import android.bluetooth.*;
@@ -48,6 +53,9 @@ public class BleService extends Service {
 	public static final String EXTRA_VALUE = "VALUE";
 	public static final String EXTRA_REQUEST = "REQUEST";
 	public static final String EXTRA_REASON = "REASON";
+	public static String MYMCU_BLE = 	"6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+	public static String MYMCU_BLE_READ =  "6e400003-b5a3-f393-e0a9-e50e24dcca9e";;
+	public static String MYMCU_BLE_WRITE = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";;
 
 	private final IBinder mBinder = new LocalBinder();
 	private BluetoothManager mBluetoothManager;
@@ -57,8 +65,9 @@ public class BleService extends Service {
 	private boolean isScanning;
 	private Handler mHandler;
 	private boolean isConnected = false;
-
 	
+	private BluetoothGattCharacteristic mWriteChar; // 发
+	private BluetoothGattCharacteristic mNotiChar; // 收
 
 	private final LeScanCallback mLeScanCallback = new LeScanCallback() {
 
@@ -87,6 +96,9 @@ public class BleService extends Service {
 				bleGattConnected(gatt.getDevice());
 				isConnected = false;
 				mBluetoothDevice = null;
+				
+				mWriteChar = null;
+				mNotiChar = null;
 			}
 		}
 
@@ -95,6 +107,21 @@ public class BleService extends Service {
 			// TODO Auto-generated method stub
 			super.onServicesDiscovered(gatt, status);
 			bleServiceDiscovered(gatt.getDevice());
+			List<BluetoothGattService> services = gatt.getServices();
+			for	(BluetoothGattService service : services) {
+				String serviceUuid = service.getUuid().toString();
+				if (serviceUuid.equals(MYMCU_BLE)) {
+					mWriteChar = service.getCharacteristic(UUID.fromString(MYMCU_BLE_WRITE));
+					mNotiChar = service.getCharacteristic(UUID.fromString(MYMCU_BLE_READ));
+					if (mNotiChar != null) {
+						updateNotificaiton(mNotiChar, true);
+					} else {
+						Log.d(TAG, "Characteristic is not found! -->Characteristic没有找到！");
+					}
+				} else {
+					Log.d(TAG, "service is not found! -->service没有找到！");
+				}
+			} 
 		}
 
 		@Override
@@ -424,4 +451,57 @@ public class BleService extends Service {
 	public void setConnected(boolean isConnected) {
 		this.isConnected = isConnected;
 	}
+	
+	/**
+	 * 发送数据
+	 * @param dataString
+	 */
+	public void writeCharacteristic(String dataString) {
+		if(mBluetoothGatt!=null){
+			if (dataString != null) {
+				byte[] data = DataUtil.getBytesByString(dataString);
+//				UUID serviceUUID = UUID.fromString(MYMCU_BLE);
+//				UUID notifyUUID = UUID.fromString(MYMCU_BLE_READ);
+//				UUID writeUUID = UUID.fromString(MYMCU_BLE_WRITE);
+				
+//				for(BluetoothGattService service : mBluetoothGatt.getServices()){
+//					Log.d("OB","service:"+service.getUuid().toString()+"---------------");
+//					
+//				}
+				
+//				BluetoothGattService service = mBluetoothGatt.getService(serviceUUID);
+//				if (service != null) {
+					
+//					for(BluetoothGattCharacteristic characteristic :service.getCharacteristics()){
+//						Log.d("OB","characteristic:"+characteristic.getUuid().toString()+"---------------");
+//					}
+					
+//					BluetoothGattCharacteristic characteristic = service.getCharacteristic(writeUUID);
+					if (mWriteChar != null) {
+						mWriteChar.setValue(data);
+						Log.d(TAG, "data :" + data );
+//						characteristic.setValue(DataUtil.getBytesByString("0002020002020101"));
+						mBluetoothGatt.writeCharacteristic(mWriteChar);
+					} else {
+						Log.d(TAG, "characteristic is not found! -->characteristic没有找到！");
+					}
+//				} else{
+//					Log.d(TAG, "service is not found! -->service没有找到！");
+//				}
+			}  
+		} else {
+			Log.d(TAG, "mBluetoothGatt is null! -->mBluetoothGatt没有连接！");
+			return;
+		}
+	}
+	
+	/**
+	 * 发送数据
+	 * @param dataString
+	 */
+	public void writeCharacteristic(MachineStatus status) {
+		 this.writeCharacteristic(status.toString());
+	}
+	
+	
 }
