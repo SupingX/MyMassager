@@ -57,7 +57,15 @@ public class DataUtil {
 	private static byte charToByte(char c) {
 		return (byte) "0123456789ABCDEF".indexOf(c);
 	}
-
+	
+	public static String toHexString(int i){
+		String value = Integer.toHexString(i);
+		if(value.length() == 1){
+			value = "0"+value;
+		}
+		return value;
+	}
+	
 	/**
 	 * 根据传入的毫秒数，转换成MM:SS时间串形式返回
 	 * 

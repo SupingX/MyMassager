@@ -2,10 +2,11 @@ package com.mycj.mymassager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,6 +24,7 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,7 +42,9 @@ import com.mycj.mymassager.view.VerticalSeekBar;
  * 
  */
 public class MainActivity extends Activity implements OnClickListener {
-	private String TAG = this.getClass().getSimpleName();
+//	private String TAG = this.getClass().getSimpleName();
+	private String TAG = "OB";
+	private boolean ready_to_exit;
 	private TextView textViewConnectState; // 连接蓝牙状态
 	private TextView textViewConnect; // 连接蓝牙
 	private TextView textViewMain; // 主机
@@ -48,7 +52,7 @@ public class MainActivity extends Activity implements OnClickListener {
 
 	private CheckBox cbModelMain; // 主机模式
 	private CheckBox cbModelSlaver; // 从机模式
-	private CheckBox cbFuzaiMain; //  主机负载状态
+	private CheckBox cbFuzaiMain; // 主机负载状态
 	private CheckBox cbFuzaiSlave; // 从机负载状态
 
 	private VerticalSeekBar seekBarMain, seekBarSlaver; // 主机/从机进度条
@@ -73,10 +77,10 @@ public class MainActivity extends Activity implements OnClickListener {
 	private View settingView;
 	private List<View> mlist; // 包含按摩仪+设置
 	private PagerAdapter mPagerAdapter; // PagerAdapter
-	
+
 	private View line;
-	
-	private TextView textViewReconnect; // 返回重连
+
+	private RelativeLayout rlReconnect; // 返回重连
 	private CheckBox checkBoxMotor; // 电机
 	/** handler **/
 	private Handler mHandler = new Handler() {
@@ -92,20 +96,27 @@ public class MainActivity extends Activity implements OnClickListener {
 			String timeStr = DataUtil.getMMSS(timer.getCurrentTime());
 			textViewTimer.setText(timeStr);
 			if (timeStr.equals("00:00")) {
-				// // 计时结束
-				// // System.out.println("计时结束");
-				// mHandler.removeCallbacks(this);
-				// restore();
-				// myApp.requestWriteCharacteristic("FD00");
-				// // iv_start.setImageResource(R.drawable.select_button_start);
-				// startActivity(intentShutDown);
+				 // 计时结束
+				Log.d(TAG, "计时结束");
+				
+					timer.stop();
+					timer = MyCountDownTimer.getInstance(1 * 60 * 1000, 1000);
+					mHandler.removeCallbacks(counterRunnable);
+					textViewTimer.setText("1:00");
+					imgStart.setImageDrawable(getResources().getDrawable(R.drawable.selector_start));
+					imgStart.setClickable(true);
+					mMachineStatus = new MachineStatus(getApplicationContext(),"00","01", "01", "00", "01",
+							"01", "00");
+					Log.d(TAG, mMachineStatus.toString());
+					mBleService.writeCharacteristic(mMachineStatus);
+					validateSeekBar();
+					validateModel();
 				return;
 			}
 			mHandler.postDelayed(this, 1000);
 		}
 	};
-	
-	private final static int REQUEST_CONNECT = 0X01; // 连接蓝牙请求
+
 	private MachineStatus mMachineStatus; // 初始状态
 	private boolean isConnected;
 	private BleService mBleService;
@@ -124,19 +135,21 @@ public class MainActivity extends Activity implements OnClickListener {
 			} else if (action.equals(BleService.BLE_GATT_CONNECTED)) {
 				Log.d("OB", "连接");
 				isConnected = true;
-				validate();
+				validateBluetoothState();
 			} else if (action.equals(BleService.BLE_GATT_DISCONNECTED)) {
 				Log.d("OB", "断开");
 				// 断开连接
 				isConnected = false;
-				validate();
+				cbFuzaiMain.setChecked(false);
+				validateBluetoothState();
+				mMachineStatus = new MachineStatus(getApplicationContext(),"00", "01", "01", "00",
+						"01", "01", "00");
 			} else if (action.equals(BleService.BLE_SERVICE_DISCOVERED)) {
 				// 发现
 			} else if (action.equals(BleService.BLE_CHARACTERISTIC_READ)) {
 				Log.d(TAG, "read数据");
-				
-			
-			} else if (action.equals(BleService.BLE_CHARACTERISTIC_NOTIFICATION)) {
+			} else if (action
+					.equals(BleService.BLE_CHARACTERISTIC_NOTIFICATION)) {
 				// 通知
 			} else if (action.equals(BleService.BLE_CHARACTERISTIC_WRITE)) {
 				// 写入数据
@@ -144,34 +157,58 @@ public class MainActivity extends Activity implements OnClickListener {
 				Log.d(TAG, "数据变化");
 				// 读取数据
 				Bundle b = intent.getExtras();
-				byte[] value =  b.getByteArray(BleService.EXTRA_VALUE);
+				byte[] value = b.getByteArray(BleService.EXTRA_VALUE);
 				Log.d(TAG, "value:" + value);
-				if(value!=null){
-					String data = DataUtil.getStringByBytes(value);
-					Log.d(TAG, "data:" + data);
-				} else {
-					Log.d(TAG, "没有数据收到");
+				if (isConnected) {
+					if (value != null) {
+						String data = DataUtil.getStringByBytes(value);
+						Log.d(TAG, "data:" + data);
+						String mainFuzai = data.substring(16, 18);
+						if (mainFuzai.equals("01")) {
+							//有负载01
+							cbFuzaiMain.setChecked(true); //主机负载状态
+						} else if (mainFuzai.equals("00")) {
+							 //无负载00
+							cbFuzaiMain.setChecked(false);
+						}
+						
+						String slaveFuzai = data.substring(19, 20);
+						if (slaveFuzai.equals("01")) {
+							//有负载01
+							cbFuzaiSlave.setChecked(true);//从机负载状态
+						} else if (slaveFuzai.equals("00")) {
+							 //无负载00
+							cbFuzaiSlave.setChecked(false);
+						}
+					} else {
+						Log.d(TAG, "没有数据收到");
+					}
 				}
-				// 数据变化
-			}  else if (action.equals(BleService.BLE_RSSI_READ)) {
+			} else if (action.equals(BleService.BLE_RSSI_READ)) {
 				Log.d(TAG, "read RSSI");
-			// RSSI读
-			} 
+				// RSSI读
+			}
 		}
+
 	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		mMachineStatus = new MachineStatus("00", "01", "01", "00", "01", "01",
-				"00", "01");
+		mMachineStatus = new MachineStatus(getApplicationContext(),"00", "01", "01", "00", "01", "01",
+				"00");
 		mBleService = ((BleApplication) getApplication()).getBleService();
 		// Log.d("OB", "---"+DataUtil.BinaryToHex("10"));
 		// Log.d("OB", "----" + DataUtil.HexToBinary("FF"));
-		// Log.d("OB", "----" + Integer.valueOf("FF",16));
+//		 Log.d("OB", "----" + Integer.valueOf("FF",16));
 		initViews();
 		setListener();
+		validateBluetoothState();
+		validateFuzaiModel();
+		validateSeekBar();
+		validateModel();
+
 	}
 
 	@Override
@@ -185,13 +222,14 @@ public class MainActivity extends Activity implements OnClickListener {
 		super.onStop();
 		unregisterReceiver(mBroadcastReceiver);
 	}
-	
+
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
 		mBleService.disconnectBleDevice();
+		mBleService = null;
 	}
-	
+
 	private void initViews() {
 		// vierPager
 		initViewPager();
@@ -200,36 +238,61 @@ public class MainActivity extends Activity implements OnClickListener {
 		tvSetting = (TextView) findViewById(R.id.tv_tab_setting);
 		imgMaster = (ImageView) findViewById(R.id.img_massager);
 		imgSetting = (ImageView) findViewById(R.id.img_setting);
-		//main
+		// main
 		line = massagerView.findViewById(R.id.line);
 		// 1初始蓝牙状态
-		initBluetoothState();
-		// 2负载
-		initFuzai();
-		// 3主机/从机进度条
-		initSeekBar();
-		// 4按摩模式
-		initModel();
-		// 5加减
-		initAddMinus();
-		// 6计时器
-		initTimer();
-		//slave
-		// 1电机开关
-		initMotor();
-		// 2返回重连
-		textViewReconnect = (TextView) settingView.findViewById(R.id.tv_reconnect);
-		textViewReconnect.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				mBleService.disconnectBleDevice();
-				Intent connectIntent = new Intent(MainActivity.this,
-						ConnectActivity.class);
-				startActivityForResult(connectIntent, REQUEST_CONNECT);
-			}
-		});
+		textViewConnectState = (TextView) massagerView
+				.findViewById(R.id.tv_connect_state);
+		textViewConnect = (TextView) massagerView.findViewById(R.id.tv_connect);
+		textViewMain = (TextView) massagerView.findViewById(R.id.tv_main);
+		textViewSlave = (TextView) massagerView.findViewById(R.id.tv_slave);
+		// 2 负载状态
+		// 2.1 主机负载状态
+		cbFuzaiMain = (CheckBox) massagerView.findViewById(R.id.cb_main_fuzai);
+		// 2.2 从机负载状态
+		cbFuzaiSlave = (CheckBox) massagerView .findViewById(R.id.cb_slave_fuzai);
+		// 3 负载模式
+		// 3.1 主机负载模式
+		cbModelMain = (CheckBox) massagerView.findViewById(R.id.cb_model_main);
+		cbModelMain.setChecked(true);
+		// 3.2 从机负载模式
+		cbModelSlaver = (CheckBox) massagerView.findViewById(R.id.cb_model_affiliate);
+		cbModelSlaver.setChecked(true);
+		// 4 进度条
+		// 4.1 主机进度条
+		seekBarMain = (VerticalSeekBar) massagerView.findViewById(R.id.seekbar_master);
+		// 4.2 从机进度条
+		seekBarSlaver = (VerticalSeekBar) massagerView.findViewById(R.id.seekbar_slaver);
+		// 5 按摩模式
+		// 5.1 主机按摩模式
+		radioGroupMain = (RadioGroup) massagerView.findViewById(R.id.radio_main);
+		radioBtnMainMaster = (RadioButton) massagerView.findViewById(R.id.rb_main_master);
+		radioBtnMainAcupuncture = (RadioButton) massagerView.findViewById(R.id.rb_main_acup);
+		radioBtnMainHammer = (RadioButton) massagerView.findViewById(R.id.rb_main_hammer);
+		// 5.2 从机按摩模式
+		radioGroupSlaver = (RadioGroup) massagerView.findViewById(R.id.rg_slave);
+		radioBtnSlaverMaster = (RadioButton) massagerView.findViewById(R.id.rb_slave_master);
+		radioBtnSlaverAcupuncture = (RadioButton) massagerView.findViewById(R.id.rb_slave_acup);
+		radioBtnSlaverHammer = (RadioButton) massagerView.findViewById(R.id.rb_slave_hammer);
+		// 6 加减
+		// 6.1 主机加减
+		imgMainAdd = (ImageView) massagerView.findViewById(R.id.img_main_add);
+		imgMainMinus = (ImageView) massagerView.findViewById(R.id.img_main_minus);
+		// 6.2 副机加减
+		imgSlaverAdd = (ImageView) massagerView.findViewById(R.id.img_slave_add);
+        imgSlaverMinus = (ImageView) massagerView.findViewById(R.id.img_slave_minus);
+		// 7 计时器
+ 		textViewTimer = (TextView) massagerView.findViewById(R.id.tv_timer);
+ 		imgStart = (ImageView) massagerView.findViewById(R.id.img_start);
+ 		imgStop = (ImageView) massagerView.findViewById(R.id.img_stop);
+		// 8 电机开关
+ 		checkBoxMotor = (CheckBox) settingView.findViewById(R.id.cb_motor);
+ 		checkBoxMotor.setChecked(mMachineStatus.getMotorStatus().equals("01") ? true : false);
+		// 9 返回重连
+		rlReconnect = (RelativeLayout) settingView.findViewById(R.id.rl_reconnect);
 		
 	}
+
 	/**
 	 * 加载vierPager
 	 */
@@ -241,7 +304,6 @@ public class MainActivity extends Activity implements OnClickListener {
 		mlist = new ArrayList<>();
 		mlist.add(massagerView);
 		mlist.add(settingView);
-
 		mPagerAdapter = new PagerAdapter() {
 			@Override
 			public boolean isViewFromObject(View arg0, Object arg1) {
@@ -274,14 +336,12 @@ public class MainActivity extends Activity implements OnClickListener {
 			public void onPageSelected(int arg0) {
 				validateBottom(arg0);
 			}
-
 			@Override
 			public void onPageScrolled(int arg0, float arg1, int arg2) {
 				//
-				Log.d(TAG, "arg0 : " + arg0 + ",arg1 : " + arg1 + ",arg2 : "
-						+ arg2);
+//				Log.d(TAG, "arg0 : " + arg0 + ",arg1 : " + arg1 + ",arg2 : "
+//						+ arg2);
 			}
-
 			@Override
 			public void onPageScrollStateChanged(int arg0) {
 
@@ -292,270 +352,401 @@ public class MainActivity extends Activity implements OnClickListener {
 	/**
 	 * 初始蓝牙状态
 	 */
-	private void initBluetoothState() {
-
-		// 初始蓝牙状态
-		textViewConnectState = (TextView) massagerView
-				.findViewById(R.id.tv_connect_state);
-		textViewConnect = (TextView) massagerView.findViewById(R.id.tv_connect);
-		// 主机/从机
-		textViewMain = (TextView) massagerView.findViewById(R.id.tv_main);
-		textViewSlave = (TextView) massagerView.findViewById(R.id.tv_slave);
-		validate();
-
+	private void validateBluetoothState() {
+		if (!isConnected) {
+			textViewConnectState.setVisibility(View.VISIBLE);
+			textViewConnect.setVisibility(View.VISIBLE);
+			textViewMain.setVisibility(View.GONE);
+			textViewSlave.setVisibility(View.GONE);
+			line.setBackgroundColor(getResources().getColor(R.color.grey));
+		} else {
+			textViewConnectState.setVisibility(View.GONE);
+			textViewConnect.setVisibility(View.GONE);
+			textViewMain.setVisibility(View.VISIBLE);
+			textViewSlave.setVisibility(View.VISIBLE);
+			line.setBackgroundColor(getResources().getColor(R.color.chenghong));
+		}
 	}
 
 	/**
 	 * 主机/从机 负载模式
 	 */
-	public void initFuzai() {
-		// 负载模式
-		// 1.主机负载模式
-		cbModelMain = (CheckBox) massagerView.findViewById(R.id.cb_model_main);
-		// 初始化主机负载模式
-		cbModelMain.setChecked(true);
+	public void validateFuzaiModel() {
+	
 		cbModelMain.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView,
 					boolean isChecked) {
 				if (isChecked) {
-					buttonView
-							.setButtonDrawable(R.drawable.selector_model_power);
+					// 力度
+					buttonView.setButtonDrawable(R.drawable.selector_model_power);
 					seekBarMain.setMax(20);
-					seekBarMain.setProgress(1);
+					seekBarMain.setProgress(Integer.valueOf(mMachineStatus.getMainPower(),16));
 				} else {
-					buttonView
-							.setButtonDrawable(R.drawable.selector_model_frequency);
+					// 频率
+					buttonView.setButtonDrawable(R.drawable.selector_model_frequency);
 					seekBarMain.setMax(10);
-					seekBarMain.setProgress(1);
+					Log.d(TAG, mMachineStatus.getMainFreq());
+					Log.d(TAG, "-->"+Integer.valueOf(mMachineStatus.getMainFreq(),16));
+					seekBarMain.setProgress(Integer.valueOf(mMachineStatus.getMainFreq(),16));
 				}
 			}
 		});
-		// 2.从机负载模式
-		cbModelSlaver = (CheckBox) massagerView
-				.findViewById(R.id.cb_model_affiliate);
-		cbModelMain.setChecked(true);
+		
 		cbModelSlaver.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView,
 					boolean isChecked) {
 				if (isChecked) {
-					buttonView
-							.setButtonDrawable(R.drawable.selector_model_power);
+					// 力度
+					buttonView.setButtonDrawable(R.drawable.selector_model_power);
 					seekBarSlaver.setMax(20);
-					seekBarSlaver.setProgress(1);
+					seekBarSlaver.setProgress(Integer.valueOf(mMachineStatus.getSlavePower(),16));
 				} else {
-					buttonView
-							.setButtonDrawable(R.drawable.selector_model_frequency);
+					// 频率
+					buttonView.setButtonDrawable(R.drawable.selector_model_frequency);
 					seekBarSlaver.setMax(10);
-					seekBarSlaver.setProgress(1);
+					seekBarSlaver.setProgress(Integer.valueOf(mMachineStatus.getSlaveFreq(),16));
 				}
 			}
 		});
 
 	}
-	
+
 	/**
-	 * 主机/从机 负载模式
+	 * 主机/从机 负载状态
 	 */
-	public void initFuzaiState() {
-		cbFuzaiMain = (CheckBox) massagerView.findViewById(R.id.cb_main_fuzai);
-		cbFuzaiSlave = (CheckBox) massagerView.findViewById(R.id.cb_slave_fuzai);
+	public void fuzaiListener() {
+	
+		cbFuzaiMain.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				if(isChecked){
+					//有负载
+					cbFuzaiMain.setButtonDrawable(getResources().getDrawable(R.drawable.ic_electload_ok));
+				} else {
+					//无负载
+					cbFuzaiMain.setButtonDrawable(getResources().getDrawable(R.drawable.ic_electload));
+				}
+			}
+		});
+//		cbFuzaiMain.setChecked(false);
+		cbFuzaiSlave.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				if(isChecked){
+					//有负载
+					cbFuzaiSlave.setButtonDrawable(getResources().getDrawable(R.drawable.ic_electload_ok));
+				} else {
+					//无负载
+					cbFuzaiSlave.setButtonDrawable(getResources().getDrawable(R.drawable.ic_electload));
+				}
+			}
+		});
+//		cbFuzaiSlave.setChecked(false);
 	}
+
 	/**
 	 * 进度条Seekbar
 	 */
-	private void initSeekBar() {
-		// seekbar
-		seekBarMain = (VerticalSeekBar) massagerView
-				.findViewById(R.id.seekbar_master);
-		seekBarMain.setMax(20);
-		seekBarMain.setProgress(1);
-		seekBarMain.setProgress(Integer.valueOf(mMachineStatus.getMainPower()));
-		seekBarSlaver = (VerticalSeekBar) massagerView
-				.findViewById(R.id.seekbar_slaver);
-		seekBarSlaver.setMax(20);
-		seekBarSlaver.setProgress(1);
+	private void validateSeekBar() {
+	
+		if(cbModelMain.isChecked()){
+			//主机力度 
+			Log.d(TAG, "mMachineStatus.getMainPower():" + mMachineStatus.getMainPower());
+			seekBarMain.setProgress(Integer.valueOf(mMachineStatus.getMainPower(),16));
+		} else {
+			//主机频率
+			Log.d(TAG, "mMachineStatus.getMainFreq():" + mMachineStatus.getMainFreq());
+			seekBarMain.setProgress(Integer.valueOf(mMachineStatus.getMainFreq(),16));
+		}
+		
+		if(cbModelSlaver.isChecked()){
+			//从机力度 
+			Log.d(TAG, "mMachineStatus.getSlavePower():" + mMachineStatus.getSlavePower());
+			seekBarSlaver.setProgress(Integer.valueOf(mMachineStatus.getSlavePower(),16));
+		} else {
+			//从机频率
+			Log.d(TAG, "mMachineStatus.getSlaveFreq():" + mMachineStatus.getSlaveFreq());
+			seekBarSlaver.setProgress(Integer.valueOf(mMachineStatus.getSlaveFreq(),16));
+		}
+	
 	}
+	
+	public void modelListener(){
 
+		//主机按摩模式 按摩/针灸/锤击
+		radioGroupMain.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+				// 按摩master ：0x00
+				// 针灸acupuncture：0x01
+				// 锤击hammer ：0x02
+				if(cbModelMain.isChecked()){
+					//力度 -->seekbar为1
+					seekBarMain.setProgress(1);
+					mMachineStatus.setMainPower("01");
+				}
+				
+				switch (checkedId) {
+				case R.id.rb_main_master:
+					radioBtnMainMaster
+							.setButtonDrawable(R.drawable.ic_massage_pressed);
+					radioBtnMainAcupuncture
+							.setButtonDrawable(R.drawable.selector_acup);
+					radioBtnMainHammer
+							.setButtonDrawable(R.drawable.selector_hammer);
+					mMachineStatus.setMainModel("00");
+					break;
+				case R.id.rb_main_acup:
+					radioBtnMainMaster
+							.setButtonDrawable(R.drawable.selector_massager);
+					radioBtnMainAcupuncture
+							.setButtonDrawable(R.drawable.ic_acupuncture_pressed);
+					radioBtnMainHammer
+							.setButtonDrawable(R.drawable.selector_hammer);
+					mMachineStatus.setMainModel("01");
+					break;
+				case R.id.rb_main_hammer:
+					radioBtnMainMaster
+							.setButtonDrawable(R.drawable.selector_massager);
+					radioBtnMainAcupuncture
+							.setButtonDrawable(R.drawable.selector_acup);
+					radioBtnMainHammer
+							.setButtonDrawable(R.drawable.ic_hammer_pressed);
+					mMachineStatus.setMainModel("02");
+					break;
+
+				default:
+					break;
+				}
+				mBleService.writeCharacteristic(mMachineStatus);
+			}
+		});
+		//从机按摩模式：按摩/针灸/锤击
+		radioGroupSlaver.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+			// 按摩master ：0x00
+			// 针灸acupuncture：0x01
+			// 锤击hammer ：0x02
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+				if(cbModelSlaver.isChecked()){
+					//力度 -->seekbar为1
+					seekBarSlaver.setProgress(1);
+					mMachineStatus.setSlavePower("01");
+				}
+				switch (checkedId) {
+				case R.id.rb_slave_master:
+					radioBtnSlaverMaster
+							.setButtonDrawable(R.drawable.ic_massage_pressed);
+					radioBtnSlaverAcupuncture
+							.setButtonDrawable(R.drawable.selector_acup);
+					radioBtnSlaverHammer
+							.setButtonDrawable(R.drawable.selector_hammer);
+					mMachineStatus.setSlaveModel("00");
+					break;
+				case R.id.rb_slave_acup:
+					radioBtnSlaverMaster
+							.setButtonDrawable(R.drawable.selector_massager);
+					radioBtnSlaverAcupuncture
+							.setButtonDrawable(R.drawable.ic_acupuncture_pressed);
+					radioBtnSlaverHammer
+							.setButtonDrawable(R.drawable.selector_hammer);
+					mMachineStatus.setSlaveModel("01");
+					break;
+				case R.id.rb_slave_hammer:
+					radioBtnSlaverMaster
+							.setButtonDrawable(R.drawable.selector_massager);
+					radioBtnSlaverAcupuncture
+							.setButtonDrawable(R.drawable.selector_acup);
+					radioBtnSlaverHammer
+							.setButtonDrawable(R.drawable.ic_hammer_pressed);
+					mMachineStatus.setSlaveModel("02");
+					break;
+
+				default:
+					break;
+				}
+				mBleService.writeCharacteristic(mMachineStatus);
+			}
+		});
+	}
+	
 	/**
 	 * 主机/从机按摩模式
 	 */
-	public void initModel() {
-		// 按摩模式
-		// 1.主机按摩模式
-		radioGroupMain = (RadioGroup) massagerView
-				.findViewById(R.id.radio_main);
-		radioBtnMainMaster = (RadioButton) massagerView
-				.findViewById(R.id.rb_main_master);
-		radioBtnMainAcupuncture = (RadioButton) massagerView
-				.findViewById(R.id.rb_main_acup);
-		radioBtnMainHammer = (RadioButton) massagerView
-				.findViewById(R.id.rb_main_hammer);
-		radioGroupMain
-				.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-					@Override
-					public void onCheckedChanged(RadioGroup group, int checkedId) {
-						// 按摩master ：0x00
-						// 针灸acupuncture：0x01
-						// 锤击hammer ：0x02
-						switch (checkedId) {
-						case R.id.rb_main_master:
-							radioBtnMainMaster
-									.setButtonDrawable(R.drawable.ic_massage_pressed);
-							radioBtnMainAcupuncture
-									.setButtonDrawable(R.drawable.selector_acup);
-							radioBtnMainHammer
-									.setButtonDrawable(R.drawable.selector_hammer);
-							mMachineStatus.setMainModel("00");
-							break;
-						case R.id.rb_main_acup:
-							radioBtnMainMaster
-									.setButtonDrawable(R.drawable.selector_massager);
-							radioBtnMainAcupuncture
-									.setButtonDrawable(R.drawable.ic_acupuncture_pressed);
-							radioBtnMainHammer
-									.setButtonDrawable(R.drawable.selector_hammer);
-							mMachineStatus.setMainModel("01");
-							break;
-						case R.id.rb_main_hammer:
-							radioBtnMainMaster
-									.setButtonDrawable(R.drawable.selector_massager);
-							radioBtnMainAcupuncture
-									.setButtonDrawable(R.drawable.selector_acup);
-							radioBtnMainHammer
-									.setButtonDrawable(R.drawable.ic_hammer_pressed);
-							mMachineStatus.setMainModel("02");
-							break;
-
-						default:
-							break;
-						}
-					}
-				});
-		radioGroupMain.check(radioBtnMainMaster.getId());
-
-		// 2.从机按摩模式
-		radioGroupSlaver = (RadioGroup) massagerView
-				.findViewById(R.id.rg_slave);
-		radioBtnSlaverMaster = (RadioButton) massagerView
-				.findViewById(R.id.rb_slave_master);
-		radioBtnSlaverAcupuncture = (RadioButton) massagerView
-				.findViewById(R.id.rb_slave_acup);
-		radioBtnSlaverHammer = (RadioButton) massagerView
-				.findViewById(R.id.rb_slave_hammer);
-		radioGroupSlaver
-				.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-					// 按摩master ：0x00
-					// 针灸acupuncture：0x01
-					// 锤击hammer ：0x02
-					@Override
-					public void onCheckedChanged(RadioGroup group, int checkedId) {
-						switch (checkedId) {
-						case R.id.rb_slave_master:
-							radioBtnSlaverMaster
-									.setButtonDrawable(R.drawable.ic_massage_pressed);
-							radioBtnSlaverAcupuncture
-									.setButtonDrawable(R.drawable.selector_acup);
-							radioBtnSlaverHammer
-									.setButtonDrawable(R.drawable.selector_hammer);
-							mMachineStatus.setSlaveModel("00");
-							break;
-						case R.id.rb_slave_acup:
-							radioBtnSlaverMaster
-									.setButtonDrawable(R.drawable.selector_massager);
-							radioBtnSlaverAcupuncture
-									.setButtonDrawable(R.drawable.ic_acupuncture_pressed);
-							radioBtnSlaverHammer
-									.setButtonDrawable(R.drawable.selector_hammer);
-							mMachineStatus.setSlaveModel("01");
-							break;
-						case R.id.rb_slave_hammer:
-							radioBtnSlaverMaster
-									.setButtonDrawable(R.drawable.selector_massager);
-							radioBtnSlaverAcupuncture
-									.setButtonDrawable(R.drawable.selector_acup);
-							radioBtnSlaverHammer
-									.setButtonDrawable(R.drawable.ic_hammer_pressed);
-							mMachineStatus.setSlaveModel("02");
-							break;
-
-						default:
-							break;
-						}
-					}
-				});
-		radioGroupSlaver.check(radioBtnSlaverMaster.getId());
+	public void validateModel() {
+		Log.d(TAG, "主机模式:" +Integer.valueOf(mMachineStatus.getMainModel(),16));
+		//初始化主机按摩模式
+		switch (Integer.valueOf(mMachineStatus.getMainModel(),16)) {
+		case 0:
+			radioGroupMain.check(R.id.rb_main_master);
+			break;
+		case 1:
+			radioGroupMain.check(R.id.rb_main_acup);
+			break;
+		case 2:
+			radioGroupMain.check(R.id.rb_main_hammer);
+			break;
+		default:
+			break;
+		}
+		
+		//初始化从机按摩模式
+		switch (Integer.valueOf(mMachineStatus.getSlaveModel(),16)) {
+		case 0:
+			radioGroupSlaver.check(R.id.rb_slave_master);
+			break;
+		case 1:
+			radioGroupSlaver.check(R.id.rb_slave_acup);
+			break;
+		case 2:
+			radioGroupSlaver.check(R.id.rb_slave_hammer);
+			break;
+		default:
+			break;
+		}
 	}
 
 	/**
 	 * 加减
 	 */
-	private void initAddMinus() {
-		// 加减
-		// 频率 0x01 ~ 0x0a
-		// 强度 0x01 ~ 0x14
-		imgMainAdd = (ImageView) massagerView.findViewById(R.id.img_main_add);
+	private void validateAddListener() {
+	
 		imgMainAdd.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				
 				if (isConnected) {
-					int mainCurrentProgress = seekBarMain.getProgress() + 1;
-					if (mainCurrentProgress >= 20) {
-						mainCurrentProgress = 20;
-					}
-					seekBarMain.setProgress(mainCurrentProgress);
-					if (cbModelMain.isChecked()) {// 当负载为power时
-						mMachineStatus.setMainPower(Integer
-								.toHexString(mainCurrentProgress));
-					} else { // 负载为freq频率时
-						mMachineStatus.setMainFreq(Integer
-								.toHexString(mainCurrentProgress));
+					String start = mMachineStatus.getStartStatus();	//只有开始才能加减
+					if (start.equals("01")) {
+						int mainCurrentProgress = seekBarMain.getProgress() + 1;
+						if (cbModelMain.isChecked()) {
+							// 当负载为power时
+							if (mainCurrentProgress >= 20) {
+								mainCurrentProgress = 20;
+							}
+							seekBarMain.setProgress(mainCurrentProgress);
+							mMachineStatus.setMainPower(DataUtil
+									.toHexString(mainCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						} else {
+							if (mainCurrentProgress >= 10) {
+								mainCurrentProgress = 10;
+							}
+							seekBarMain.setProgress(mainCurrentProgress);
+							// 负载为freq频率时
+							mMachineStatus.setMainFreq(DataUtil
+									.toHexString(mainCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						}
+					} else {
+						Log.d(TAG, "请按开始增减强度/频率");
 					}
 				} else {
 					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
 				}
 			}
 		});
-		imgMainMinus = (ImageView) massagerView
-				.findViewById(R.id.img_main_minus);
+		
 		imgMainMinus.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				seekBarMain.setProgress(seekBarMain.getProgress() - 1);
-			}
-		});
-		imgSlaverAdd = (ImageView) massagerView
-				.findViewById(R.id.img_slave_add);
-		imgSlaverAdd.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				seekBarSlaver.setProgress(seekBarSlaver.getProgress() + 1);
-			}
-		});
-		imgSlaverMinus = (ImageView) massagerView
-				.findViewById(R.id.img_slave_minus);
-		imgSlaverMinus.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-
 				if (isConnected) {
-					int slaveCurrentProgress = seekBarSlaver.getProgress() - 1;
-					if (slaveCurrentProgress <= 0) {
-						slaveCurrentProgress = 0;
-					}
-					seekBarSlaver.setProgress(slaveCurrentProgress);
-					if (cbModelSlaver.isChecked()) {// 当负载为power时
-						mMachineStatus.setSlavePower(Integer
-								.toHexString(slaveCurrentProgress));
-					} else { // 负载为freq频率时
-						mMachineStatus.setSlaveFreq(Integer
-								.toHexString(slaveCurrentProgress));
+					String start = mMachineStatus.getStartStatus();
+					if (start.equals("01")) {
+						int mainCurrentProgress = seekBarMain.getProgress() - 1;
+						if (mainCurrentProgress <= 0) {
+							mainCurrentProgress = 0;
+						}
+						seekBarMain.setProgress(mainCurrentProgress);
+						if (cbModelMain.isChecked()) {// 当负载为power时
+							mMachineStatus.setMainPower(DataUtil
+									.toHexString(mainCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						} else { // 负载为freq频率时
+							mMachineStatus.setMainFreq(DataUtil
+									.toHexString(mainCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						}
+					} else {
+						Log.d(TAG, "请按开始增减强度/频率");
 					}
 				} else {
 					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
 				}
+			}
+		});
+		
+		
+		
+		imgSlaverAdd.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (isConnected) {
+					String start = mMachineStatus.getStartStatus();	//只有开始才能加减
+					if (start.equals("01")) {
+						int slaveCurrentProgress = seekBarSlaver.getProgress() + 1;
+						if (cbModelSlaver.isChecked()) {
+							// 当负载为power时
+							if (slaveCurrentProgress >= 20) {
+								slaveCurrentProgress = 20;
+							}
+							seekBarSlaver.setProgress(slaveCurrentProgress);
+							mMachineStatus.setSlavePower(DataUtil
+									.toHexString(slaveCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						} else {
+							if (slaveCurrentProgress >= 10) {
+								slaveCurrentProgress = 10;
+							}
+							seekBarSlaver.setProgress(slaveCurrentProgress);
+							// 负载为freq频率时
+							mMachineStatus.setSlaveFreq(DataUtil
+									.toHexString(slaveCurrentProgress));
+							Log.d(TAG, mMachineStatus.toString());
+							mBleService.writeCharacteristic(mMachineStatus);
+						}
+					} else {
+						Log.d(TAG, "请按开始增减强度/频率");
+					}
+				} else {
+					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+				}
+			}
+		});
+	
+		imgSlaverMinus.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				if (isConnected) {
+					String start = mMachineStatus.getStartStatus();	//只有开始才能加减
+					if (start.equals("01")) {
+						int slaveCurrentProgress = seekBarSlaver.getProgress() - 1;
+						if (slaveCurrentProgress <= 0) {
+							slaveCurrentProgress = 0;
+						}
+						seekBarSlaver.setProgress(slaveCurrentProgress);
+						if (cbModelSlaver.isChecked()) {// 当负载为power时
+							mMachineStatus.setSlavePower(DataUtil
+									.toHexString(slaveCurrentProgress));
+							mBleService.writeCharacteristic(mMachineStatus);
+						} else { // 负载为freq频率时
+							mMachineStatus.setSlaveFreq(DataUtil
+									.toHexString(slaveCurrentProgress));
+							mBleService.writeCharacteristic(mMachineStatus);
+						}
+					} else {
+						Log.d(TAG, "请按开始增减强度/频率");
+					}
+				} else {
+					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+				}
+				
 			}
 		});
 	}
@@ -563,12 +754,8 @@ public class MainActivity extends Activity implements OnClickListener {
 	/**
 	 * 计时
 	 */
-	private void initTimer() {
-		// 计时器
-		textViewTimer = (TextView) massagerView.findViewById(R.id.tv_timer);
-		timer = MyCountDownTimer.getInstance(15 * 60 * 1000, 1000);
-		imgStart = (ImageView) massagerView.findViewById(R.id.img_start);
-		imgStop = (ImageView) massagerView.findViewById(R.id.img_stop);
+	private void timerListener() {
+		timer = MyCountDownTimer.getInstance(1 * 60 * 1000, 1000);
 		String timeStr = DataUtil.getMMSS(timer.getCurrentTime());
 		textViewTimer.setText(timeStr);
 		// 开始计时
@@ -577,12 +764,12 @@ public class MainActivity extends Activity implements OnClickListener {
 		imgStart.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-
 				if (isConnected) {
 					imgStart.setImageDrawable(getResources().getDrawable(
 							R.drawable.ic_start_pressed));
 					mMachineStatus.setStartStatus("01");
 					// 发送
+					Log.d(TAG, mMachineStatus.toString());
 					mBleService.writeCharacteristic(mMachineStatus);
 					timer.start();
 					mHandler.postDelayed(counterRunnable, 1000);
@@ -595,39 +782,69 @@ public class MainActivity extends Activity implements OnClickListener {
 		imgStop.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				timer.stop();
-				mHandler.removeCallbacks(counterRunnable);
-				textViewTimer.setText("15:00");
-				imgStart.setImageDrawable(getResources().getDrawable(
-						R.drawable.selector_start));
-				imgStart.setClickable(true);
-				//
-				// mMachineStatus = null ;
-			}
-		});
-	}
-	
-	/**
-	 * 电机开关
-	 */
-	private void initMotor(){
-		checkBoxMotor = (CheckBox) settingView.findViewById(R.id.cb_motor);
-		checkBoxMotor.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			@Override
-			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-				if(isChecked){
-					Toast.makeText(getApplicationContext(), "开！", 0).show();
+				if (isConnected) {
+					timer.stop();
+					timer = MyCountDownTimer.getInstance(1 * 60 * 1000, 1000);
+					mHandler.removeCallbacks(counterRunnable);
+					textViewTimer.setText("1:00");
+					imgStart.setImageDrawable(getResources().getDrawable(
+							R.drawable.selector_start));
+					imgStart.setClickable(true);
+					mMachineStatus = new MachineStatus(getApplicationContext(),"00","01", "01", "00", "01",
+							"01", "00");
+					
+					Log.d(TAG, mMachineStatus.toString());
+					mBleService.writeCharacteristic(mMachineStatus);
+					validateSeekBar();
+					validateModel();
 				} else {
-					Toast.makeText(getApplicationContext(), "关！", 0).show();
+					Log.d(TAG, "已断开连接");
 				}
 			}
 		});
 	}
 
+	/**
+	 * 电机开关
+	 */
+	private void motorListener() {
+		checkBoxMotor.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView,
+					boolean isChecked) {
+				if (isChecked) {
+					checkBoxMotor.setButtonDrawable(R.drawable.ic_switch_on);
+					mMachineStatus.setMotorStatus("01");
+				} else {
+					checkBoxMotor.setButtonDrawable(R.drawable.ic_switch_off);
+					mMachineStatus.setMotorStatus("00");
+				}
+				if(isConnected){
+					mBleService.writeCharacteristic(mMachineStatus);
+				} 
+			}
+		});
+	}
+
 	private void setListener() {
+		//设置
 		imgSetting.setOnClickListener(this);
+		//按摩仪
 		imgMaster.setOnClickListener(this);
+		//连接蓝牙
 		textViewConnect.setOnClickListener(this);
+		//重连蓝牙
+		rlReconnect.setOnClickListener(this);
+		//负载模式选择：力度power 频率freq
+		fuzaiListener();
+		//主机/从机按摩模式：按摩/针灸/锤击
+		modelListener();
+		//加减
+		validateAddListener();
+		//开始结束
+		timerListener();
+		//电机
+		motorListener();
 	}
 
 	@Override
@@ -646,12 +863,18 @@ public class MainActivity extends Activity implements OnClickListener {
 					ConnectActivity.class);
 			startActivity(connectIntent);
 			break;
+		case R.id.rl_reconnect:
+			mBleService.disconnectBleDevice();
+			Intent reconnectIntent = new Intent(MainActivity.this,
+					ConnectActivity.class);
+			startActivity(reconnectIntent);
+			finish();
+			break;
 
 		default:
 			break;
 		}
 	}
-
 
 	public void validateBottom(int flag) {
 		switch (flag) {
@@ -672,27 +895,29 @@ public class MainActivity extends Activity implements OnClickListener {
 			break;
 		}
 	}
-
-
-	/**
-	 * 当前连接则不显示返回重连
-	 */
-	private void validate() {
-		if (!isConnected) {
-			textViewConnectState.setVisibility(View.VISIBLE);
-			textViewConnect.setVisibility(View.VISIBLE);
-			textViewMain.setVisibility(View.GONE);
-			textViewSlave.setVisibility(View.GONE);
-			line.setBackgroundColor(getResources().getColor(R.color.grey));
-		} else {
-			textViewConnectState.setVisibility(View.GONE);
-			textViewConnect.setVisibility(View.GONE);
-			textViewMain.setVisibility(View.VISIBLE);
-			textViewSlave.setVisibility(View.VISIBLE);
-			line.setBackgroundColor(getResources().getColor(R.color.chenghong));
 	
+	@Override
+		public void onBackPressed() {
+			super.onBackPressed();
+			exitWith2Press();
+		}
+	private void exitWith2Press() {
+		Timer tExit = null;
+		if (!ready_to_exit) {
+			// 准备退出
+			ready_to_exit = true;
+			tExit = new Timer();
+			tExit.schedule(new TimerTask() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					// 两秒之内没有按下第二次返回键，取消退出
+					ready_to_exit = false;
+				}
+			}, 2 * 1000);
+		} else {
+			MainActivity.this.finish();
 		}
 	}
-	
 	
 }

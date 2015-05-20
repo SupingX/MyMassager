@@ -93,12 +93,12 @@ public class BleService extends Service {
 				}
 				bleGattConnected(mBluetoothDevice);
 			} else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
-				bleGattConnected(gatt.getDevice());
+				bleGattDisconnected(gatt.getDevice());
 				isConnected = false;
 				mBluetoothDevice = null;
-				
 				mWriteChar = null;
 				mNotiChar = null;
+				mBluetoothGatt = null;
 			}
 		}
 
@@ -273,7 +273,7 @@ public class BleService extends Service {
 				mBluetoothGatt.disconnect();
 //			}
 //			mBluetoothGatt.close();
-//			mBluetoothGatt = null;
+			mBluetoothGatt = null;
 		}
 		bleGattDisconnected(mBluetoothDevice);
 	}

@@ -23,6 +23,11 @@
         <item name="android:layout_width">3dp</item>
         <item name="android:layout_height">250dp</item>
     </style>
+        <style name="line_hor">
+        <item name="android:background">#dddddddd</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+    </style>
     
         
       <style name="mainText">
@@ -30,4 +35,20 @@
         <item name="android:textSize">22sp</item>
         <item name="android:padding">2dp</item>
     </style>
+    
+      <style name= "splash">
+            <item name="android:background">@drawable/icon_massager_ble</item>
+          
+      </style>
+      
+      
+
+	<style name="FeelyouWindowAnimTheme" parent="@android:style/Animation.Activity">
+	    <item name="android:activityOpenEnterAnimation">@anim/in_from_left</item>
+	    <item name="android:activityOpenExitAnimation">@anim/out_from_right</item>
+	    <item name="android:activityCloseEnterAnimation">@anim/in_from_right</item>
+	    <item name="android:activityCloseExitAnimation">@anim/out_from_left</item>
+	</style>
+
+      
 </resources>

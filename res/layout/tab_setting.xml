@@ -1,14 +1,20 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="${packageName}.${activityClass}" >
-
+    tools:context="${packageName}.${activityClass}"
+    android:orientation="vertical"
+     >
+	
     <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:padding="10dp" >
+        android:layout_marginTop="60dp"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="10dp" 
+        android:clickable="true"
+        android:focusable="true"
+         >
 
         <TextView
             android:layout_width="wrap_content"
@@ -28,19 +34,75 @@
             android:checked="false"
             android:clickable="true" />
     </RelativeLayout>
+    <View style="@style/line_hor"></View>
+    <RelativeLayout
+        android:id="@+id/rl_reconnect"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="10dp" 
+        android:background="@drawable/selector_bg_item"
+        android:clickable="true"
+        android:focusable="true"
+         >
 
-    <TextView
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:text="返回重连"
+            android:textSize="16sp" />
+
+          <ImageView
+              android:layout_width="20dp"
+              android:layout_height="20dp"
+              android:layout_alignParentRight="true"
+              android:layout_centerVertical="true"
+              android:src="@drawable/icon_right_arrow" />
+       
+    </RelativeLayout>
+    <View style="@style/line_hor"></View>
+    <RelativeLayout
+        android:layout_width="match_parent"
+         android:layout_height="50dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="10dp" 
+           android:background="@drawable/selector_bg_item"
+        android:clickable="true"
+        android:focusable="true"
+         >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:text="帮助"
+            android:textSize="16sp" />
+
+          <ImageView
+              android:layout_width="20dp"
+              android:layout_height="20dp"
+              android:layout_alignParentRight="true"
+              android:layout_centerVertical="true"
+              android:src="@drawable/icon_right_arrow" />
+       
+    </RelativeLayout>
+    <View style="@style/line_hor"></View>
+
+  <!--   <TextView
         android:id="@+id/tv_reconnect"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
         android:padding="20dp"
         android:text="返回重连"
         android:textColor="@drawable/selector_conntect"
-        android:textSize="20sp" />
+        android:textSize="20sp" /> -->
 
 
-</RelativeLayout>
+
+</LinearLayout>

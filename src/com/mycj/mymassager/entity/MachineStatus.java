@@ -1,6 +1,14 @@
 package com.mycj.mymassager.entity;
 
+import com.mycj.mymassager.util.SharedPreferenceUtil;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+
+
 public class MachineStatus {
+	private Context context;
 	/**主机模式**/
 	private String mainModel; 	//主机模式
 	/**主机强度**/
@@ -18,15 +26,50 @@ public class MachineStatus {
 	/**电机开关**/
 	private String motorStatus; //电机开关
 	
-	
 	public MachineStatus() {
 		super();
 	}
 	
-
+	/**
+	 * @param context
+	 * @param mainModel
+	 * @param mainPower
+	 * @param mainFreq
+	 * @param slaveModel
+	 * @param slavePower
+	 * @param slaveFreq
+	 * @param startStatus
+	 */
+	public MachineStatus(Context context,String mainModel, String mainPower, String mainFreq,
+			String slaveModel, String slavePower, String slaveFreq,
+			String startStatus) {
+		super();
+		this.mainModel = mainModel;
+		this.mainPower = mainPower;
+		this.mainFreq = mainFreq;
+		this.slaveModel = slaveModel;
+		this.slavePower = slavePower;
+		this.slaveFreq = slaveFreq;
+		this.startStatus = startStatus;
+		this.motorStatus = (String) SharedPreferenceUtil.get(context, "motor", "00");
+		System.out.println("motorStatus : " + (String) SharedPreferenceUtil.get(context, "motor", "00"));
+		this.context = context;
+		
+	}
+	
+	/**
+	 * @param mainModel
+	 * @param mainPower
+	 * @param mainFreq
+	 * @param slaveModel
+	 * @param slavePower
+	 * @param slaveFreq
+	 * @param startStatus
+	 * @param motorStatus
+	 */
 	public MachineStatus(String mainModel, String mainPower, String mainFreq,
 			String slaveModel, String slavePower, String slaveFreq,
-			String startStatus, String motorStatus) {
+			String startStatus,String motorStatus) {
 		super();
 		this.mainModel = mainModel;
 		this.mainPower = mainPower;
@@ -86,10 +129,12 @@ public class MachineStatus {
 	public void setStartStatus(String startStatus) {
 		this.startStatus = startStatus;
 	}
+
 	public String getMotorStatus() {
 		return motorStatus;
 	}
 	public void setMotorStatus(String motorStatus) {
+		SharedPreferenceUtil.put(context, "motor", motorStatus);
 		this.motorStatus = motorStatus;
 	}
 	

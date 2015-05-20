@@ -12,6 +12,7 @@
     <color name="blue_light">#550070AA</color>
     <color name="grey">#7B7360</color>
     <color name="grey_light">#557B7360</color>
+    <color name="grey_lighter">#22A9A9A9</color>
     
     <!-- 橙红 -->
     <color name="chenghong">#F39C12</color>

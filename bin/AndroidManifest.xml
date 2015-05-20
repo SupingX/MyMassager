@@ -26,15 +26,16 @@
             android:configChanges="locale|layoutDirection"
             android:label="@string/title_activity_connect"
             android:launchMode="singleTask"
-            android:screenOrientation="portrait" >
+            android:screenOrientation="portrait" 
+            >
       
         </activity>
         <activity
             android:name="com.mycj.mymassager.MainActivity"
             android:configChanges="locale|layoutDirection"
             android:label="@string/app_name"
-            android:launchMode="singleInstance"
-            android:screenOrientation="portrait" >
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait">
         </activity>
 
         <service
@@ -44,7 +45,10 @@
 
         <activity
             android:name="com.mycj.mymassager.FrontActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:configChanges="locale|layoutDirection"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait" >
                   <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -3,6 +3,7 @@ package com.mycj.mymassager;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 
 /**
  * 启动activity
@@ -14,10 +15,17 @@ public class FrontActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-//		setContentView(R.layout.activity_front);
-		Intent intentScan  = new Intent(FrontActivity.this,ConnectActivity.class);
-		startActivity(intentScan);
-		this.finish();
+		setContentView(R.layout.activity_front);
+		new Handler().postDelayed(new Runnable() {
+			
+			@Override
+			public void run() {
+				Intent intentScan  = new Intent(FrontActivity.this,ConnectActivity.class);
+				startActivity(intentScan);
+				finish();
+			}
+		}, 5000);
+	
 		
 	}
 }
