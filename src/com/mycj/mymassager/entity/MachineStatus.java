@@ -80,6 +80,19 @@ public class MachineStatus {
 		this.startStatus = startStatus;
 		this.motorStatus = motorStatus;
 	}
+	
+	public MachineStatus(String mainModel, String mainPower, String mainFreq,
+			String slaveModel, String slavePower, String slaveFreq,
+			String startStatus) {
+		super();
+		this.mainModel = mainModel;
+		this.mainPower = mainPower;
+		this.mainFreq = mainFreq;
+		this.slaveModel = slaveModel;
+		this.slavePower = slavePower;
+		this.slaveFreq = slaveFreq;
+		this.startStatus = startStatus;
+	}
 
 
 	@Override
@@ -134,7 +147,7 @@ public class MachineStatus {
 		return motorStatus;
 	}
 	public void setMotorStatus(String motorStatus) {
-		SharedPreferenceUtil.put(context, "motor", motorStatus);
+//		SharedPreferenceUtil.put(context, "motor", motorStatus);
 		this.motorStatus = motorStatus;
 	}
 	

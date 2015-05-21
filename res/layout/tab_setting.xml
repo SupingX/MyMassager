@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:paddingLeft="20dp"
-        android:paddingRight="10dp" 
+        android:paddingRight="20dp" 
         android:clickable="true"
         android:focusable="true"
          >
@@ -21,12 +21,12 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:text="电机开关"
+            android:text="@string/master_on_off"
             android:textSize="16sp" />
 
         <CheckBox
             android:id="@+id/cb_motor"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
@@ -51,10 +51,11 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:text="返回重连"
+            android:text="@string/re_connect"
             android:textSize="16sp" />
 
           <ImageView
+              android:contentDescription="@string/app_name"
               android:layout_width="20dp"
               android:layout_height="20dp"
               android:layout_alignParentRight="true"
@@ -78,10 +79,11 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:text="帮助"
+            android:text="@string/helper"
             android:textSize="16sp" />
 
           <ImageView
+                android:contentDescription="@string/app_name"
               android:layout_width="20dp"
               android:layout_height="20dp"
               android:layout_alignParentRight="true"

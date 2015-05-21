@@ -22,6 +22,8 @@
     <color name="bottom_background">#F6F6F8</color>
     
     <!--  massager -->
-      <color name="light_black_color">#FF34495E</color>
+
 	
+    <!-- 竖线 -->
+        <color name="vertical_line">#FFDADADA</color>
 </resources>

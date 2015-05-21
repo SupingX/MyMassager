@@ -2,13 +2,13 @@
 
     <!--
         Base application theme, dependent on API level. This theme is replaced
-        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
+        by AppBaseTheme from res/values-vXX/styles.xml on newer devices.
     -->
     <style name="AppBaseTheme" parent="android:Theme.Light">
         <!--
             Theme customizations available in newer API levels can go in
             res/values-vXX/styles.xml, while customizations related to
-            backward-compatibility can go here.
+            backward-compatibility can go here.
         -->
     </style>
 
@@ -16,39 +16,27 @@
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
     </style>
-	
-    
-        <style name="line_vertical">
-        <item name="android:background">#dddddddd</item>
+
+    <style name="line_vertical">
+        <item name="android:background">@color/vertical_line</item>
         <item name="android:layout_width">3dp</item>
-        <item name="android:layout_height">250dp</item>
+        <item name="android:layout_height">200dp</item>
     </style>
-        <style name="line_hor">
+
+    <style name="line_hor">
         <item name="android:background">#dddddddd</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
     </style>
-    
-        
-      <style name="mainText">
+
+    <style name="mainText">
         <item name="android:textColor">#dddddddd</item>
         <item name="android:textSize">22sp</item>
         <item name="android:padding">2dp</item>
     </style>
-    
-      <style name= "splash">
-            <item name="android:background">@drawable/icon_massager_ble</item>
-          
-      </style>
-      
-      
 
-	<style name="FeelyouWindowAnimTheme" parent="@android:style/Animation.Activity">
-	    <item name="android:activityOpenEnterAnimation">@anim/in_from_left</item>
-	    <item name="android:activityOpenExitAnimation">@anim/out_from_right</item>
-	    <item name="android:activityCloseEnterAnimation">@anim/in_from_right</item>
-	    <item name="android:activityCloseExitAnimation">@anim/out_from_left</item>
-	</style>
+    <style name="splash">
+        <item name="android:background">@drawable/icon_massager_ble</item>
+    </style>
 
-      
 </resources>

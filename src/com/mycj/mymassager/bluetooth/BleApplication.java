@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 public class BleApplication extends Application {
 	private BleService mService;
+	private boolean bleSupport;
 	private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
 		@Override
@@ -36,8 +37,10 @@ public class BleApplication extends Application {
 		Intent intent = new Intent(this, BleService.class);
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
 		    Toast.makeText(this, "ble_not_supported", Toast.LENGTH_SHORT).show();
+		    bleSupport = false;
 		} else {
 			bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
+		    bleSupport = true;
 		}
 		
 	}
@@ -53,6 +56,10 @@ public class BleApplication extends Application {
 
 	public BleService getBleService() {
 		return mService;
+	}
+	
+	public boolean isbleSupport(){
+		return bleSupport;
 	}
 
 }

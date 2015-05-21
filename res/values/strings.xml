@@ -5,5 +5,19 @@
     <string name="hello_world">Hello world!</string>
     <string name="title_activity_connect">ConnectActivity</string>
     <string name="title_activity_front">FrontActivity</string>
+    
+    <string name="enable_device">可用设备</string>
+    <string name="refresh">刷新</string>
+    <string name="skip_connect">跳过连接</string>
+    <string name="massager">按摩仪</string>
+    <string name="setting">设置</string>
+    <string name="master_on_off">电机开关</string>
+    <string name="re_connect">返回重连</string>
+    <string name="helper">帮助</string>
+    <string name="un_connect_device">未连接蓝牙设备...</string>
+    <string name="main_machine">主机</string>
+    <string name="follow_machine">从机</string>
+    <string name="time_zero">00:00</string>
+    
 
 </resources>

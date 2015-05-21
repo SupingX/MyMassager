@@ -8,6 +8,8 @@
 
     <LinearLayout
               android:paddingLeft="20dp"
+              android:paddingTop="8dp"
+              android:paddingBottom="8dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -32,6 +34,7 @@
             />
     </LinearLayout>
      <ImageView
+           android:contentDescription="@string/app_name"
          android:scrollbarStyle="@null"
            android:layout_gravity="center_vertical"
             android:layout_weight="1"
@@ -40,4 +43,5 @@
             android:layout_height="20dp"
             android:src="@drawable/icon_right_arrow"
           />
+     
 </LinearLayout>

@@ -32,7 +32,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="主机"
+                    android:text="@string/main_machine"
                     android:textColor="@color/grey_light"
                     android:textSize="24sp"
                     android:textStyle="bold" />
@@ -42,7 +42,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="未连接蓝牙设备..."
+                    android:text="@string/un_connect_device"
                     android:textColor="@color/red"
                     android:textSize="14sp" />
             </FrameLayout>
@@ -67,9 +67,10 @@
                     android:layout_width="40dp"
                     android:layout_height="20dp"
                     android:layout_marginLeft="10dp"
-                    android:clickable="true"
+                    android:clickable="false"
                     android:contentDescription="@string/app_name"
                     android:button="@drawable/ic_electload"
+                    
                     />
             </LinearLayout>
         </LinearLayout>
@@ -91,7 +92,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="从机"
+                    android:text="@string/follow_machine"
                     android:textColor="@color/grey_light"
                     android:textSize="24sp"
                     android:textStyle="bold" />
@@ -103,7 +104,7 @@
                     android:layout_gravity="center"
                     android:clickable="true"
                     android:focusable="true"
-                    android:text="返回重连"
+                    android:text="@string/re_connect"
                     android:textColor="@drawable/selector_conntect"
                     android:textSize="14sp" />
             </FrameLayout>
@@ -119,7 +120,7 @@
                     android:id="@+id/cb_slave_fuzai"
                     android:layout_width="40dp"
                     android:layout_height="20dp"
-                    android:clickable="true"
+                    android:clickable="false"
                     android:contentDescription="@string/app_name"
                     android:button="@drawable/ic_electload" />
 
@@ -186,7 +187,7 @@
             <RadioGroup
                 android:id="@+id/radio_main"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical" >
@@ -224,9 +225,7 @@
 
         <View
              android:id="@+id/line"
-            android:layout_width="3dp"
-            android:layout_height="200dp"
-            android:background="#FFDADADA" />
+            style="@style/line_vertical"/>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -238,7 +237,7 @@
             <RadioGroup
                 android:id="@+id/rg_slave"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical" >
@@ -275,7 +274,7 @@
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:gravity="center"
                 android:orientation="vertical" >
@@ -323,7 +322,6 @@
             android:layout_weight="1"
             android:gravity="center"
             android:orientation="horizontal" >
-
             <ImageView
                 android:id="@+id/img_start"
                 android:layout_width="wrap_content"
@@ -339,7 +337,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="00:00"
+            android:text="@string/time_zero"
             android:textColor="@color/chenghong"
             android:textSize="24sp" />
 

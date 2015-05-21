@@ -24,7 +24,7 @@ public class FrontActivity extends Activity {
 				startActivity(intentScan);
 				finish();
 			}
-		}, 5000);
+		}, 3000);
 	
 		
 	}
