@@ -21,7 +21,8 @@ import android.util.Log;
 import android.widget.Toast;
 
 public class BleService extends Service {
-	private static final String TAG = BleService.class.getSimpleName();
+	// private static final String TAG = BleService.class.getSimpleName();
+	private static final String TAG = "OB";
 	private static final int SCAN_PERIOD = 10000;
 
 	/** Intent for broadcast */
@@ -40,6 +41,7 @@ public class BleService extends Service {
 	public static final String BLE_CHARACTERISTIC_WRITE = "com.maginawin.bleguide.BLE_CHARACTERISTIC_WRITE";
 	public static final String BLE_CHARACTERISTIC_CHANGED = "com.maginawin.bleguide.BLE_CHARACTERISTIC_CHANGED";
 	public static final String BLE_RSSI_READ = "com.maginawin.bleguide.BLE_RSSI_READ";
+	public static final String BLE_CHARACTERISTIC_FOUND = "com.maginawin.bleguide.BLE_CHARACTERISTIC_FOUND";
 
 	/** Intent extras */
 	public static final String EXTRA_DEVICE = "DEVICE";
@@ -53,8 +55,8 @@ public class BleService extends Service {
 	public static final String EXTRA_VALUE = "VALUE";
 	public static final String EXTRA_REQUEST = "REQUEST";
 	public static final String EXTRA_REASON = "REASON";
-	public static String MYMCU_BLE = 	"6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-	public static String MYMCU_BLE_READ =  "6e400003-b5a3-f393-e0a9-e50e24dcca9e";;
+	public static String MYMCU_BLE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+	public static String MYMCU_BLE_READ = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";;
 	public static String MYMCU_BLE_WRITE = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";;
 
 	private final IBinder mBinder = new LocalBinder();
@@ -64,16 +66,14 @@ public class BleService extends Service {
 	private BluetoothDevice mBluetoothDevice;
 	private boolean isScanning;
 	private Handler mHandler;
-	private boolean isConnected = false;
+//	private boolean isConnected = false;
+	private int  connectState;//0:断开； 1：连接； 2：正在连接；3：正在关闭；
+	
 	private BluetoothGattCharacteristic mWriteChar; // 发
 	private BluetoothGattCharacteristic mNotiChar; // 收
-	
+
 	/**
-	 * LeScanCallback
-	 *  	当搜索到设备，在其 onLeScan()传入当前搜索到的设备参数
-	 *  		device
-	 *  		rssi
-	 *  		scanRecord
+	 * LeScanCallback 当搜索到设备，在其 onLeScan()传入当前搜索到的设备参数 device rssi scanRecord
 	 */
 	private final LeScanCallback mLeScanCallback = new LeScanCallback() {
 
@@ -82,48 +82,51 @@ public class BleService extends Service {
 			bleDeviceFound(device, rssi, scanRecord);
 		}
 	};
-	
+
 	/**
-	 * Gatt连接状态回调
-	 * BluetoothGattCallback
+	 * Gatt连接状态回调 BluetoothGattCallback
 	 * 
 	 * BlueToothGatt的连接状态，连接信息
 	 */
 	private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
-		//连接状态
+		// 连接状态
 		@Override
 		public void onConnectionStateChange(BluetoothGatt gatt, int status,
 				int newState) {
 			super.onConnectionStateChange(gatt, status, newState);
 			switch (newState) {
-			//已连接
+			// 已连接
 			case BluetoothGatt.STATE_CONNECTED:
 				mBluetoothDevice = gatt.getDevice();
-				isConnected = true;
+//				isConnected = true;
+				connectState = 1;
 				if (!gatt.discoverServices()) {
 					Log.d(TAG, "discover services failure...");
 				} else {
 					bleGattConnected(mBluetoothDevice);
 				}
-				
+
 				break;
-			//连接中
+			// 连接中
 			case BluetoothGatt.STATE_CONNECTING:
+				connectState = 2;
 				//
-			break;
-			//已断开
+				break;
+			// 已断开
 			case BluetoothGatt.STATE_DISCONNECTED:
 				bleGattDisconnected();
-				isConnected = false;
+//				isConnected = false;
+				connectState = 0;
 				mBluetoothDevice = null;
 				mWriteChar = null;
 				mNotiChar = null;
 				mBluetoothGatt = null;
 				break;
-			//断开中
+			// 断开中
 			case BluetoothGatt.STATE_DISCONNECTING:
 				bleGattDisconnectting();
-				isConnected = false;
+//				isConnected = false;
+				connectState = 4;
 				mBluetoothDevice = null;
 				mWriteChar = null;
 				mNotiChar = null;
@@ -134,30 +137,39 @@ public class BleService extends Service {
 				break;
 			}
 		}
-		
-		//连接信息
-		//service -- characteristic -- descriptor
+
+		// 连接信息
+		// service -- characteristic -- descriptor
 		@Override
 		public void onServicesDiscovered(BluetoothGatt gatt, int status) {
 			super.onServicesDiscovered(gatt, status);
 			bleServiceDiscovered(gatt.getDevice());
 			List<BluetoothGattService> services = gatt.getServices();
-			for	(BluetoothGattService service : services) {
+			for (BluetoothGattService service : services) {
 				String serviceUuid = service.getUuid().toString();
 				if (serviceUuid.equals(MYMCU_BLE)) {
-					Log.d(TAG, "onServicesDiscovered() -->service被发现！" + service.getUuid().toString());
-					mWriteChar = service.getCharacteristic(UUID.fromString(MYMCU_BLE_WRITE));
-					mNotiChar = service.getCharacteristic(UUID.fromString(MYMCU_BLE_READ));
-					if (mNotiChar != null) {
-						Log.d(TAG, "onServicesDiscovered() -->Characteristic被发现！" + mNotiChar.toString());
-						updateNotificaiton(mNotiChar, true); //发现有notification特性就发送通知
-					} else {
-						Log.d(TAG, "onServicesDiscovered() -->Characteristic没有发现！");
-					}
+					Log.d(TAG, "onServicesDiscovered() -->service被发现！"
+							+ service.getUuid().toString());
+					mWriteChar = service.getCharacteristic(UUID
+							.fromString(MYMCU_BLE_WRITE));
+
+					mNotiChar = service.getCharacteristic(UUID
+							.fromString(MYMCU_BLE_READ));
+
 				} else {
 					Log.d(TAG, "onServicesDiscovered() -->service没有发现！");
 				}
-			} 
+			}
+
+			if (mWriteChar != null) {
+				Log.d(TAG, "onServicesDiscovered() -->CharacteristicWrite被发现！");
+				bleCharacteristicFound(mWriteChar);
+			}
+			if (mNotiChar != null) {
+				Log.d(TAG, "onServicesDiscovered() -->CharacteristicRead被发现！"
+						+ mNotiChar.toString());
+				updateNotificaiton(mNotiChar, true); // 发现有notification特性就发送通知
+			}
 		}
 
 		@Override
@@ -167,16 +179,21 @@ public class BleService extends Service {
 			super.onCharacteristicRead(gatt, characteristic, status);
 			bleCharacteristicRead(gatt.getDevice(), characteristic.getUuid()
 					.toString(), status, characteristic.getValue());
-			;
+			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
+			Log.d(TAG, "【characteristic is read】 "
+					+ characteristicStr);
 		}
 
 		@Override
 		public void onCharacteristicWrite(BluetoothGatt gatt,
 				BluetoothGattCharacteristic characteristic, int status) {
-			// TODO Auto-generated method stub
 			super.onCharacteristicWrite(gatt, characteristic, status);
 			bleCharacteristicWrite(gatt.getDevice(), characteristic.getUuid()
 					.toString(), status);
+			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
+			Log.d(TAG, "【characteristic is write】 "
+					+ characteristicStr);
+
 		}
 
 		@Override
@@ -186,6 +203,9 @@ public class BleService extends Service {
 			super.onCharacteristicChanged(gatt, characteristic);
 			bleCharacteristicChange(gatt.getDevice(), characteristic.getUuid()
 					.toString(), characteristic.getValue());
+			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
+			Log.d(TAG, "【characteristic is changed】 "
+					+ characteristicStr);
 			;
 		}
 
@@ -194,6 +214,7 @@ public class BleService extends Service {
 			// TODO Auto-generated method stub
 			super.onReadRemoteRssi(gatt, rssi, status);
 			bleReadRemoteRssi(gatt.getDevice(), rssi, status);
+			
 		}
 
 	};
@@ -245,15 +266,18 @@ public class BleService extends Service {
 		filter.addAction(BLE_CHARACTERISTIC_WRITE);
 		filter.addAction(BLE_CHARACTERISTIC_CHANGED);
 		filter.addAction(BLE_GATT_DISCONNECTTING);
+		filter.addAction(BLE_RSSI_READ);
+		filter.addAction(BLE_CHARACTERISTIC_FOUND);
 		return filter;
 	}
 
 	public BluetoothGatt getBluetoothGatt() {
 		return mBluetoothGatt;
 	}
-	
+
 	/**
 	 * 搜索/停止搜索
+	 * 
 	 * @param isScan
 	 */
 	public void scanBleDevices(boolean isScan) {
@@ -280,25 +304,29 @@ public class BleService extends Service {
 				bleDeviceStopScan();
 			}
 		} else {
-			//not support
+			// not support
 		}
 	}
-	
+
 	/**
 	 * 连接蓝牙
+	 * 
 	 * @param device
 	 */
 	public void connectBleDevice(BluetoothDevice device) {
 		this.connectBleDevice(device.getAddress());
 	}
+
 	/**
 	 * 连接GATT
+	 * 
 	 * @param address
 	 */
 	public void connectBleDevice(String address) {
 		Log.d(TAG, "连接蓝牙...");
 		if (isBleEnabled()) {
-			if (mBluetoothGatt != null&& mBluetoothDevice.getAddress().equals(address)) {
+			if (mBluetoothGatt != null
+					&& mBluetoothDevice.getAddress().equals(address)) {
 				if (mBluetoothGatt.connect()) {
 					Log.d(TAG, "connectBleDevice():" + "重新连接？");
 					return;
@@ -312,7 +340,7 @@ public class BleService extends Service {
 			Log.d(TAG, "writeCharacteristic()--手机不支持ble蓝牙！");
 		}
 	}
-	
+
 	/**
 	 * 断开蓝牙
 	 */
@@ -328,63 +356,68 @@ public class BleService extends Service {
 			Log.d(TAG, "writeCharacteristic()--手机不支持ble蓝牙！");
 		}
 	}
-	
+
 	/**
 	 * 通知。
+	 * 
 	 * @param characteristic
 	 * @param enable
 	 */
-	public void updateNotificaiton(BluetoothGattCharacteristic characteristic,boolean enable) {
+	public void updateNotificaiton(BluetoothGattCharacteristic characteristic,
+			boolean enable) {
 		if (isBleEnabled()) {
 			Log.d(TAG, "updateNotificaiton():注册setCharacteristicNotification()");
-			mBluetoothGatt.setCharacteristicNotification(characteristic, enable);//设置characteristic通知,当有变化时会返回
+			mBluetoothGatt
+					.setCharacteristicNotification(characteristic, enable);// 设置characteristic通知,当有变化时会返回
 			if (enable) {
-				BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID
+				BluetoothGattDescriptor descriptor = characteristic
+						.getDescriptor(UUID
 								.fromString("00002902-0000-1000-8000-00805f9b34fb"));
-				descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);//
+				descriptor
+						.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);//
 				mBluetoothGatt.writeDescriptor(descriptor);
 			}
-		}else {
+		} else {
 			Log.d(TAG, "writeCharacteristic()--手机不支持ble蓝牙！");
 		}
 	}
-	
+
 	/**
 	 * 蓝牙是否可用
+	 * 
 	 * @return
 	 */
 	protected boolean isBleEnabled() {
-		Log.d("SF","检测蓝牙是否可用");
+		Log.d("SF", "检测蓝牙是否可用");
 		boolean isEnabled = false;
 		mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
 		mBluetoothAdapter = mBluetoothManager.getAdapter();
-		//是否打开
+		// 是否打开
 		if (!mBluetoothAdapter.isEnabled()) {
-			Log.d("SF","检测蓝牙是否打开");
+			Log.d("SF", "检测蓝牙是否打开");
 			bleStatusAbnormal();
 		} else {
-			//是否支持BLE
+			// 是否支持BLE
 			if (getPackageManager().hasSystemFeature(
 					PackageManager.FEATURE_BLUETOOTH_LE)) {
-				Log.d("SF","支持ble");
-//				if (mBluetoothAdapter != null) {
-					isEnabled = true;
-//				}
+				Log.d("SF", "支持ble");
+				// if (mBluetoothAdapter != null) {
+				isEnabled = true;
+				// }
 			} else {
-				Log.d("SF","not support------------------");
+				Log.d("SF", "not support------------------");
 				Toast.makeText(getApplicationContext(), "ble not support",
 						Toast.LENGTH_SHORT).show();
 				bleNotSupported();
-				Log.d("SF","not support===================");
+				Log.d("SF", "not support===================");
 			}
 		}
-		Log.d(TAG,"isBleEnabled() 蓝牙是否可用: " + isEnabled);
+		Log.d(TAG, "isBleEnabled() 蓝牙是否可用: " + isEnabled);
 		return isEnabled;
 	}
-	
-	
-	/**               actionIntents                    **/
-	
+
+	/** actionIntents **/
+
 	protected void bleNotSupported() {
 		Log.d(TAG, "ble not supported.");
 		Intent intent = new Intent(BLE_NOT_SUPPORTED);
@@ -402,9 +435,10 @@ public class BleService extends Service {
 		Intent intent = new Intent(BLE_STATUS_ABNORMAL);
 		sendBroadcast(intent);
 	}
-	
+
 	/**
 	 * 找到设备
+	 * 
 	 * @param device
 	 * @param rssi
 	 * @param scanRecord
@@ -444,7 +478,7 @@ public class BleService extends Service {
 		Intent intent = new Intent(BLE_GATT_DISCONNECTED);
 		sendBroadcast(intent);
 	}
-	
+
 	protected void bleGattDisconnectting() {
 		Log.d(TAG, "ble gatt disconnted.");
 		Intent intent = new Intent(BLE_GATT_DISCONNECTTING);
@@ -506,6 +540,13 @@ public class BleService extends Service {
 		sendBroadcast(intent);
 	}
 
+	protected void bleCharacteristicFound(
+			BluetoothGattCharacteristic characteristic) {
+		Log.d(TAG, "【ble characteristic is found : " + characteristic);
+		Intent intent = new Intent(BLE_CHARACTERISTIC_FOUND);
+		sendBroadcast(intent);
+	}
+
 	protected void bleReadRemoteRssi(BluetoothDevice device, int rssi,
 			int status) {
 		Log.d(TAG, "ble read remote rssi : " + rssi);
@@ -515,46 +556,56 @@ public class BleService extends Service {
 		intent.putExtra(EXTRA_STATUS, status);
 		sendBroadcast(intent);
 	}
-	
-	public boolean isConnected() {
-		return isConnected;
+
+//	public boolean isConnected() {
+//		return isConnected;
+//	}
+	public int  getConnectState() {
+		return connectState;
 	}
 
 	/**
 	 * 发送数据
+	 * 
 	 * @param dataString
 	 */
 	public void writeCharacteristic(String dataString) {
 		if (isBleEnabled()) {
 			if (mBluetoothGatt != null) {
-				if (dataString != null) {
-					byte[] data = DataUtil.getBytesByString(dataString);
-					if (mWriteChar != null) {
+				if (isRightDevice()) {
+					if (dataString != null) {
+						byte[] data = DataUtil.getBytesByString(dataString);
 						mWriteChar.setValue(data);
 						Log.d(TAG, "data :" + data);
-						//						characteristic.setValue(DataUtil.getBytesByString("0002020002020101"));
+						// characteristic.setValue(DataUtil.getBytesByString("0002020002020101"));
 						mBluetoothGatt.writeCharacteristic(mWriteChar);
-					} else {
-						Log.d(TAG,
-								"characteristic is not found! -->characteristic没有找到！");
 					}
+				} else {
+					Log.d(TAG, "连接的设备不匹配！");
 				}
 			} else {
 				Log.d(TAG, "mBluetoothGatt is null! -->mBluetoothGatt没有连接！");
 				return;
 			}
-		}else {
+		} else {
 			Log.d(TAG, "writeCharacteristic()--手机不支持ble蓝牙！");
 		}
 	}
-	
+
+	public boolean isRightDevice() {
+		return mWriteChar != null ;
+	}
+
 	/**
 	 * 发送数据
+	 * 
 	 * @param dataString
 	 */
-	public void writeCharacteristic(MachineStatus status) {
-		 this.writeCharacteristic(status.toString());
-	}
-	
-	
+	 public void writeCharacteristic(MachineStatus status) {
+	 this.writeCharacteristic(status.toString());
+	 }
+//	public boolean writeCharacteristic(MachineStatus status) {
+//		return true;
+//	}
+
 }

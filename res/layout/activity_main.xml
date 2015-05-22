@@ -82,7 +82,7 @@
                 android:ems="3"
                 android:gravity="center"
                 android:text="@string/setting"
-                android:textColor="@color/green_1"
+                android:textColor="@color/grey"
                 android:textSize="12sp" />
 
 			</LinearLayout>

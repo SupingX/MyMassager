@@ -16,6 +16,7 @@
     
     <!-- 橙红 -->
     <color name="chenghong">#F39C12</color>
+    <color name="chenghong_light">#55F39C12</color>
      <color name="main_background_color">#FFF0EFF4</color>
     <!--  底部tab -->
     <color name="bottom_tab_split_line">#929292</color>
