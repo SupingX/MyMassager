@@ -44,9 +44,10 @@ public class ConnectActivity extends Activity {
 	private ListView listViewBle;
 	private ProgressBar mProgressBar;
 	private BleDevicesAdapter mBleDevicesAdapter;
-//	private ProgressBar mProgressConnectting;
+	// private ProgressBar mProgressConnectting;
 	private ProgressDialog connectingDialog;
-	private Handler mHandle  = new Handler();
+	private boolean isconnetting = false;
+	private Handler mHandle = new Handler();
 	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -88,12 +89,16 @@ public class ConnectActivity extends Activity {
 				//
 			} else if (action.equals(BleService.BLE_SERVICE_DISCOVERED)) {
 				// 发现
+			} else if (action.equals(BleService.BLE_CHARACTERISTIC_FOUND)) {
+				// 发现
+				isconnetting = false;
+				connectingDialog.dismiss();
+				startActivity(new Intent(ConnectActivity.this,MainActivity.class));
+				finish();
 			}
 
 		}
 	};
-	
-	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -128,12 +133,13 @@ public class ConnectActivity extends Activity {
 		super.onStop();
 		unregisterReceiver(mBroadcastReceiver);
 	}
+
 	@Override
 	protected void onDestroy() {
-		if(backDialog!=null){
+		if (backDialog != null) {
 			backDialog.dismiss();
 		}
-		if (connectingDialog!=null) {
+		if (connectingDialog != null) {
 			connectingDialog.dismiss();
 		}
 		super.onDestroy();
@@ -158,50 +164,42 @@ public class ConnectActivity extends Activity {
 							.scanBleDevices(false);
 					final BluetoothDevice device = mBlueToothlist.get(position);
 					if (device != null) {
-//						AlertDialog.Builder mBuilder = new AlertDialog.Builder(
-//								ConnectActivity.this);
-//						View dialog = getLayoutInflater().inflate(
-//								R.layout.dialog, null);
-//						mProgressConnectting = (ProgressBar) dialog
-//								.findViewById(R.id.numberbar1);
-//						mBuilder.setView(dialog);
-//						final AlertDialog connectingDialog  = mBuilder.create();
-//						connectingDialog.show();
-						connectingDialog	  = ProgressDialog.show(ConnectActivity.this, "","正在连接设备...", true);
-						
-						// 连接蓝牙
-						mBleService.connectBleDevice(device);
-						
+						// AlertDialog.Builder mBuilder = new
+						// AlertDialog.Builder(
+						// ConnectActivity.this);
+						// View dialog = getLayoutInflater().inflate(
+						// R.layout.dialog, null);
+						// mProgressConnectting = (ProgressBar) dialog
+						// .findViewById(R.id.numberbar1);
+						// mBuilder.setView(dialog);
+						// final AlertDialog connectingDialog =
+						// mBuilder.create();
+						// connectingDialog.show();
+						isconnetting = true;
+						connectingDialog = ProgressDialog.show(
+								ConnectActivity.this, "", "正在连接设备...", true);
+
 						Runnable dialogRunnable = new Runnable() {
 							@Override
 							public void run() {
-								
-								if (((BleApplication) getApplication()).isbleSupport()) {
-									// 是否连接
-//									if (mBleService.isConnected()) {
-									if (mBleService.getConnectState()==1) {
-										//清空handler
-//										mHandle.removeCallbacks(dialogRunnable);
-//										connectingDialog.dismiss();
-//										if (((BleApplication) getApplication()).getBleService().isRightDevice()) {
-											Intent intent = new Intent(ConnectActivity.this,MainActivity.class);
-											startActivity(intent);
-											connectingDialog.dismiss();
-											finish();
-//										} else {
-//											connectingDialog.dismiss();
-//											showDialog("连接了错误设别。");
-//										}
-									} else{
-										connectingDialog.dismiss();
-										showDialog("连接失败");
+
+								if (isconnetting) {
+									if(mBleService.getConnectState()!=1){
+										showDialog("连接设备失败");
+									}else {
+										showDialog("请连接按摩器");
 									}
 								}
+								
 							}
 						};
-						
-						mHandle.postDelayed( dialogRunnable,8000);
-					
+
+						// 连接蓝牙
+						mBleService.connectBleDevice(device);
+						mHandle.postDelayed(dialogRunnable, 8000);
+
+					} else {
+
 					}
 				}
 			}
@@ -289,53 +287,54 @@ public class ConnectActivity extends Activity {
 			private TextView deviceAddress;
 		}
 	}
-	
-	private void showDialog(String msg){
-		new AlertDialog.Builder(ConnectActivity.this)
-		.setTitle(msg)
-		.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				mBlueToothlist.clear();
-				runOnUiThread(new Runnable() {
+
+	private void showDialog(String msg) {
+		new AlertDialog.Builder(ConnectActivity.this).setTitle(msg)
+				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
 					@Override
-					public void run() {
-						mBleDevicesAdapter.notifyDataSetChanged();
+					public void onClick(DialogInterface dialog, int which) {
+						mBlueToothlist.clear();
+						runOnUiThread(new Runnable() {
+							@Override
+							public void run() {
+								mBleDevicesAdapter.notifyDataSetChanged();
+							}
+						});
+						// if (mBleService.isConnected()) {
+						if (mBleService.getConnectState() == 1) {
+							mBleService.disconnectBleDevice();
+						}
+						mBleService.scanBleDevices(true);
+						dialog.dismiss();
+						connectingDialog.dismiss();
 					}
-				});
-//				if (mBleService.isConnected()) {
-				if (mBleService.getConnectState()==1) {
-					mBleService.disconnectBleDevice();
-				}
-				mBleService.scanBleDevices(true);
-				dialog.dismiss();
-			}
-		})
-		.create().show();
+				}).create().show();
 	}
-	
+
 	private AlertDialog backDialog;
+
 	@Override
 	public void onBackPressed() {
-//		View dialog = getLayoutInflater().inflate(R.layout.edit_dialog, null);
-		backDialog  = new AlertDialog.Builder(ConnectActivity.this)
-		.setTitle("是否确定退出？")
-		.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-				finish();
-			}
-		})
-		.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dialog.dismiss();
-			}
-		})
-//		.setView(dialog)
-		.create();
-//		backDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.dialog_background_color));
+		// View dialog = getLayoutInflater().inflate(R.layout.edit_dialog,
+		// null);
+		backDialog = new AlertDialog.Builder(ConnectActivity.this)
+				.setTitle("是否确定退出？")
+				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+						finish();
+					}
+				})
+				.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+					}
+				})
+				// .setView(dialog)
+				.create();
+		// backDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.dialog_background_color));
 		backDialog.show();
 
 	}

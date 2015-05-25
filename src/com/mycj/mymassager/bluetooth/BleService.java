@@ -66,9 +66,9 @@ public class BleService extends Service {
 	private BluetoothDevice mBluetoothDevice;
 	private boolean isScanning;
 	private Handler mHandler;
-//	private boolean isConnected = false;
-	private int  connectState;//0:断开； 1：连接； 2：正在连接；3：正在关闭；
-	
+	// private boolean isConnected = false;
+	private int connectState;// 0:断开； 1：连接； 2：正在连接；3：正在关闭；
+
 	private BluetoothGattCharacteristic mWriteChar; // 发
 	private BluetoothGattCharacteristic mNotiChar; // 收
 
@@ -98,7 +98,7 @@ public class BleService extends Service {
 			// 已连接
 			case BluetoothGatt.STATE_CONNECTED:
 				mBluetoothDevice = gatt.getDevice();
-//				isConnected = true;
+				// isConnected = true;
 				connectState = 1;
 				if (!gatt.discoverServices()) {
 					Log.d(TAG, "discover services failure...");
@@ -115,8 +115,9 @@ public class BleService extends Service {
 			// 已断开
 			case BluetoothGatt.STATE_DISCONNECTED:
 				bleGattDisconnected();
-//				isConnected = false;
+				// isConnected = false;
 				connectState = 0;
+				// mBluetoothGatt.close();//释放的话 会导致发不出broadcast
 				mBluetoothDevice = null;
 				mWriteChar = null;
 				mNotiChar = null;
@@ -125,12 +126,8 @@ public class BleService extends Service {
 			// 断开中
 			case BluetoothGatt.STATE_DISCONNECTING:
 				bleGattDisconnectting();
-//				isConnected = false;
+				// isConnected = false;
 				connectState = 4;
-				mBluetoothDevice = null;
-				mWriteChar = null;
-				mNotiChar = null;
-				mBluetoothGatt = null;
 				break;
 
 			default:
@@ -155,21 +152,17 @@ public class BleService extends Service {
 
 					mNotiChar = service.getCharacteristic(UUID
 							.fromString(MYMCU_BLE_READ));
-
+					updateNotificaiton(mNotiChar, true); // 发现有notification特性就发送通知
 				} else {
 					Log.d(TAG, "onServicesDiscovered() -->service没有发现！");
 				}
 			}
 
-			if (mWriteChar != null) {
-				Log.d(TAG, "onServicesDiscovered() -->CharacteristicWrite被发现！");
+			if (mWriteChar != null && mNotiChar != null) {
 				bleCharacteristicFound(mWriteChar);
+
 			}
-			if (mNotiChar != null) {
-				Log.d(TAG, "onServicesDiscovered() -->CharacteristicRead被发现！"
-						+ mNotiChar.toString());
-				updateNotificaiton(mNotiChar, true); // 发现有notification特性就发送通知
-			}
+
 		}
 
 		@Override
@@ -179,9 +172,9 @@ public class BleService extends Service {
 			super.onCharacteristicRead(gatt, characteristic, status);
 			bleCharacteristicRead(gatt.getDevice(), characteristic.getUuid()
 					.toString(), status, characteristic.getValue());
-			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
-			Log.d(TAG, "【characteristic is read】 "
-					+ characteristicStr);
+			String characteristicStr = DataUtil.getStringByBytes(characteristic
+					.getValue());
+			Log.d(TAG, "【characteristic is read】 " + characteristicStr);
 		}
 
 		@Override
@@ -190,9 +183,9 @@ public class BleService extends Service {
 			super.onCharacteristicWrite(gatt, characteristic, status);
 			bleCharacteristicWrite(gatt.getDevice(), characteristic.getUuid()
 					.toString(), status);
-			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
-			Log.d(TAG, "【characteristic is write】 "
-					+ characteristicStr);
+			String characteristicStr = DataUtil.getStringByBytes(characteristic
+					.getValue());
+			Log.d(TAG, "【characteristic is write】 " + characteristicStr);
 
 		}
 
@@ -203,9 +196,9 @@ public class BleService extends Service {
 			super.onCharacteristicChanged(gatt, characteristic);
 			bleCharacteristicChange(gatt.getDevice(), characteristic.getUuid()
 					.toString(), characteristic.getValue());
-			String characteristicStr = DataUtil.getStringByBytes(characteristic.getValue());
-			Log.d(TAG, "【characteristic is changed】 "
-					+ characteristicStr);
+			String characteristicStr = DataUtil.getStringByBytes(characteristic
+					.getValue());
+			Log.d(TAG, "【characteristic is changed】 " + characteristicStr);
 			;
 		}
 
@@ -214,7 +207,7 @@ public class BleService extends Service {
 			// TODO Auto-generated method stub
 			super.onReadRemoteRssi(gatt, rssi, status);
 			bleReadRemoteRssi(gatt.getDevice(), rssi, status);
-			
+
 		}
 
 	};
@@ -334,7 +327,7 @@ public class BleService extends Service {
 			}
 			BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
 			mBluetoothDevice = device;
-			mBluetoothGatt = device.connectGatt(getApplicationContext(), true,
+			mBluetoothGatt = device.connectGatt(getApplicationContext(), false,
 					mGattCallback);
 		} else {
 			Log.d(TAG, "writeCharacteristic()--手机不支持ble蓝牙！");
@@ -349,7 +342,7 @@ public class BleService extends Service {
 		if (isBleEnabled()) {
 			if (mBluetoothGatt != null) {
 				mBluetoothGatt.disconnect();
-				mBluetoothGatt = null;
+				// mBluetoothGatt.close();//释放会导致发不出broadcast
 			}
 			bleGattDisconnected();
 		} else {
@@ -557,10 +550,10 @@ public class BleService extends Service {
 		sendBroadcast(intent);
 	}
 
-//	public boolean isConnected() {
-//		return isConnected;
-//	}
-	public int  getConnectState() {
+	// public boolean isConnected() {
+	// return isConnected;
+	// }
+	public int getConnectState() {
 		return connectState;
 	}
 
@@ -593,7 +586,7 @@ public class BleService extends Service {
 	}
 
 	public boolean isRightDevice() {
-		return mWriteChar != null ;
+		return mWriteChar != null && mNotiChar != null;
 	}
 
 	/**
@@ -601,11 +594,25 @@ public class BleService extends Service {
 	 * 
 	 * @param dataString
 	 */
-	 public void writeCharacteristic(MachineStatus status) {
-	 this.writeCharacteristic(status.toString());
-	 }
-//	public boolean writeCharacteristic(MachineStatus status) {
-//		return true;
-//	}
+	public void writeCharacteristic(MachineStatus status) {
+		this.writeCharacteristic(status.toString());
+	}
+
+	// public boolean writeCharacteristic(MachineStatus status) {
+	// return true;
+	// }
+
+	/**
+	 * 关闭
+	 */
+	public void close() {
+		if (isBleEnabled()) {
+			if (mBluetoothGatt == null) {
+				return;
+			}
+			mBluetoothGatt.close();//释放
+			mBluetoothGatt = null;
+		}
+	}
 
 }

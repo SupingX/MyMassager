@@ -146,6 +146,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			} else if (action.equals(BleService.BLE_GATT_CONNECTED)) {
 				validateBluetoothState();
 			} else if (action.equals(BleService.BLE_GATT_DISCONNECTED)) {
+				mBleService.close();//连接断开，释放设备。
 				// 断开连接
 				cbFuzaiMain.setChecked(false);
 				cbFuzaiSlave.setChecked(false);
@@ -227,6 +228,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		instanceMachineStatus();
+		
 		mBleService = ((BleApplication) getApplication()).getBleService();
 		initViews();
 		setListener();
@@ -240,6 +242,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	protected void onResume() {
 		super.onResume();
 		registerReceiver(mBroadcastReceiver, BleService.getIntentFilter());
+		mBleService.writeCharacteristic(mMachineStatus);
 	}
 
 	@Override
