@@ -1,0 +1,52 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="200dp"
+    android:orientation="vertical"
+    android:layout_height="150dp"
+    tools:context="${packageName}.${activityClass}" 
+    android:background="@drawable/dialog_background_color"
+    >
+	
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerInParent="true"
+        android:text="确定退出？" />
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dp"
+        android:layout_marginTop="20dp" >
+
+        <TextView
+            android:id="@+id/tv_positive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="45dp"
+            android:padding="8dp"
+            android:text="Confirm"
+            android:clickable="true"
+            android:focusable="true"
+            android:textColor="@drawable/selector_text_confirm" />
+
+        <TextView
+            android:id="@+id/tv_negative"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="45dp"
+            android:clickable="true"
+           	android:focusable="true"
+            android:padding="8dp"
+            android:text="Cancel"
+            android:textColor="@drawable/selector_text_cancel" />
+    </RelativeLayout>
+
+</RelativeLayout>
