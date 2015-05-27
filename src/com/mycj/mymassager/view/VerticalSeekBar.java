@@ -1,7 +1,7 @@
 package com.mycj.mymassager.view;
 
 import com.mycj.mymassager.R;
-import android.annotation.SuppressLint;
+//import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -75,7 +75,6 @@ public class VerticalSeekBar extends SeekBar {
 		// 在滑块上画上当前进度
 		canvas.drawText(text, rectThumb.width() / 2 - 3, getHeight()
 				- rectThumb.left - rectText.height() / 2 + 1, paint);
-
 
 	}
 

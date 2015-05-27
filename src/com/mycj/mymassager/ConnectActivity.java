@@ -1,35 +1,16 @@
 package com.mycj.mymassager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.os.Bundle;
-import android.os.Handler;
+import android.app.*;
+import android.bluetooth.*;
+import android.content.*;
+import android.os.*;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.ViewGroup;
-import android.view.WindowManager.LayoutParams;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
-import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.view.*;
+import android.view.View.*;
+import android.widget.*;
+import android.widget.AdapterView.*;
 
 import com.mycj.mymassager.bluetooth.BleApplication;
 import com.mycj.mymassager.bluetooth.BleService;
@@ -56,7 +37,8 @@ public class ConnectActivity extends Activity {
 				// 打开蓝牙
 				Intent mIntent = new Intent(
 						BluetoothAdapter.ACTION_REQUEST_ENABLE);
-				startActivity(mIntent);
+				// startActivity(mIntent);
+				startActivityForResult(mIntent, 1);
 			} else if (action.equals(BleService.BLE_DEVICE_SCANING)) {
 				mProgressBar.setVisibility(View.VISIBLE);
 				// textViewFresh.setVisibility(View.GONE);
@@ -81,20 +63,14 @@ public class ConnectActivity extends Activity {
 						}
 					});
 				}
-			} else if (action.equals(BleService.BLE_GATT_CONNECTED)) {
-			} else if (action.equals(BleService.BLE_GATT_DISCONNECTED)) {
-			} else if (action.equals(BleService.BLE_NOT_SUPPORTED)) {
-				// Log.d("OB","not support");
-			} else if (action.equals(BleService.BLE_STATUS_ABNORMAL)) {
-				//
-			} else if (action.equals(BleService.BLE_SERVICE_DISCOVERED)) {
-				// 发现
 			} else if (action.equals(BleService.BLE_CHARACTERISTIC_FOUND)) {
 				// 发现
 				isconnetting = false;
-				connectingDialog.dismiss();
-				startActivity(new Intent(ConnectActivity.this,MainActivity.class));
-				finish();
+				if (connectingDialog != null) {
+					connectingDialog.dismiss();
+				}
+				startActivity(new Intent(ConnectActivity.this,
+						MainActivity.class));
 			}
 
 		}
@@ -103,6 +79,7 @@ public class ConnectActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		BleApplication.addActivity(this);
 		setContentView(R.layout.activity_connect);
 		mBleService = ((BleApplication) getApplication()).getBleService();
 		initViews();
@@ -113,6 +90,24 @@ public class ConnectActivity extends Activity {
 	}
 
 	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// TODO Auto-generated method stub
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode == 1) {
+			if (Activity.RESULT_OK == resultCode) {
+				mHandle.postDelayed(new Runnable() {
+
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						mBleService.rescanBleDevices();
+					}
+				}, 4000);
+			}
+		}
+	}
+
+	@Override
 	protected void onStart() {
 		super.onStart();
 	}
@@ -120,12 +115,24 @@ public class ConnectActivity extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		mBleService.setBackground(false);
+		if (mBleService.getConnectState() != BluetoothGatt.STATE_CONNECTED) {
+			mBleService.rescanBleDevices();
+		}
+		clearBleList();
 		registerReceiver(mBroadcastReceiver, BleService.getIntentFilter());
 		if (((BleApplication) getApplication()).isbleSupport()) {
-			((BleApplication) getApplication()).getBleService().scanBleDevices(
-					true);
+			((BleApplication) getApplication()).getBleService()
+					.rescanBleDevices();
 		}
+	}
 
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		super.onPause();
+		mBleService.setBackground(true);
+		Log.e(TAG, "set backgroudn in connect : " + mBleService.isBackground());
 	}
 
 	@Override
@@ -145,6 +152,7 @@ public class ConnectActivity extends Activity {
 		super.onDestroy();
 	}
 
+	/** 初始化基础视图 */
 	public void initViews() {
 		// textViewFresh = (TextView) findViewById(R.id.tv_fresh);
 		imgRefresh = (ImageView) findViewById(R.id.img_conn);
@@ -160,21 +168,8 @@ public class ConnectActivity extends Activity {
 			public void onItemClick(AdapterView<?> parent, View view,
 					int position, long id) {
 				if (((BleApplication) getApplication()).isbleSupport()) {
-					((BleApplication) getApplication()).getBleService()
-							.scanBleDevices(false);
 					final BluetoothDevice device = mBlueToothlist.get(position);
 					if (device != null) {
-						// AlertDialog.Builder mBuilder = new
-						// AlertDialog.Builder(
-						// ConnectActivity.this);
-						// View dialog = getLayoutInflater().inflate(
-						// R.layout.dialog, null);
-						// mProgressConnectting = (ProgressBar) dialog
-						// .findViewById(R.id.numberbar1);
-						// mBuilder.setView(dialog);
-						// final AlertDialog connectingDialog =
-						// mBuilder.create();
-						// connectingDialog.show();
 						isconnetting = true;
 						connectingDialog = ProgressDialog.show(
 								ConnectActivity.this, "", "正在连接设备...", true);
@@ -184,18 +179,18 @@ public class ConnectActivity extends Activity {
 							public void run() {
 
 								if (isconnetting) {
-									if(mBleService.getConnectState()!=1){
+									if (mBleService.getConnectState() != 1) {
 										showDialog("连接设备失败");
-									}else {
+									} else {
 										showDialog("请连接按摩器");
 									}
 								}
-								
 							}
 						};
 
 						// 连接蓝牙
 						mBleService.connectBleDevice(device);
+
 						mHandle.postDelayed(dialogRunnable, 8000);
 
 					} else {
@@ -207,33 +202,31 @@ public class ConnectActivity extends Activity {
 
 		// 刷新
 		// textViewFresh.setOnClickListener(new OnClickListener() {
-		imgRefresh.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (((BleApplication) getApplication()).isbleSupport()) {
-					// mBleService = ((BleApplication)
-					// getApplication()).getBleService();
-					// System.out.println("ble service " + mBleService);
-					// mBleService.scanBleDevices(true);
-					((BleApplication) getApplication()).getBleService()
-							.scanBleDevices(true);
-				}
-			}
-		});
+		/**
+		 * imgRefresh.setOnClickListener(new OnClickListener() {
+		 * 
+		 * @Override public void onClick(View v) { if (((BleApplication)
+		 *           getApplication()).isbleSupport()) { // mBleService =
+		 *           ((BleApplication) // getApplication()).getBleService(); //
+		 *           System.out.println("ble service " + mBleService); //
+		 *           mBleService.scanBleDevices(true); ((BleApplication)
+		 *           getApplication()).getBleService() .scanBleDevices(true); }
+		 *           } });
+		 */
 
 		// 跳过
 		textViewSkip.setOnClickListener(new OnClickListener() {
 
 			@Override
 			public void onClick(View v) {
-				if (((BleApplication) getApplication()).isbleSupport()) {
-					((BleApplication) getApplication()).getBleService()
-							.scanBleDevices(false);
-				}
+				// if (((BleApplication) getApplication()).isbleSupport()) {
+				// ((BleApplication) getApplication()).getBleService()
+				// .scanBleDevices(false);
+				// }
 				Intent intent = new Intent(ConnectActivity.this,
 						MainActivity.class);
 				startActivity(intent);
-				finish();
+				// finish();
 
 			}
 		});
@@ -258,7 +251,6 @@ public class ConnectActivity extends Activity {
 			// TODO Auto-generated method stub
 			return position;
 		}
-
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			// TODO Auto-generated method stub
@@ -293,20 +285,17 @@ public class ConnectActivity extends Activity {
 				.setPositiveButton("确定", new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						mBlueToothlist.clear();
-						runOnUiThread(new Runnable() {
-							@Override
-							public void run() {
-								mBleDevicesAdapter.notifyDataSetChanged();
-							}
-						});
+						clearBleList();
 						// if (mBleService.isConnected()) {
 						if (mBleService.getConnectState() == 1) {
 							mBleService.disconnectBleDevice();
 						}
-						mBleService.scanBleDevices(true);
+						// mBleService.scanBleDevices(true);
 						dialog.dismiss();
-						connectingDialog.dismiss();
+						if (connectingDialog != null) {
+							connectingDialog.dismiss();
+						}
+
 					}
 				}).create().show();
 	}
@@ -323,7 +312,11 @@ public class ConnectActivity extends Activity {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						dialog.dismiss();
-						finish();
+//						finish();
+						//退出
+//						System.exit(0);
+//						android.os.Process.killProcess(android.os.Process.myPid());
+						BleApplication.finishActivity();
 					}
 				})
 				.setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -337,5 +330,15 @@ public class ConnectActivity extends Activity {
 		// backDialog.getWindow().setBackgroundDrawable(getResources().getDrawable(R.drawable.dialog_background_color));
 		backDialog.show();
 
+	}
+
+	private void clearBleList() {
+		mBlueToothlist.clear();
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				mBleDevicesAdapter.notifyDataSetChanged();
+			}
+		});
 	}
 }

@@ -4,13 +4,12 @@ package com.mycj.mymassager;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGatt;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -21,7 +20,6 @@ import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.CheckBox;
@@ -91,11 +89,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	private RelativeLayout rlReconnect; // 返回重连
 	private CheckBox checkBoxMotor; // 电机
 	/** handler **/
-	private Handler mHandler = new Handler() {
-		public void handleMessage(android.os.Message msg) {
-			//
-		};
-	};
+	private Handler mHandler = new Handler();
 	/** 计时Runnable **/
 	private Runnable counterRunnable = new Runnable() {
 
@@ -105,7 +99,6 @@ public class MainActivity extends Activity implements OnClickListener {
 			if (timeStr.equals("00:00")) {
 				// 计时结束
 				Log.d(TAG, "计时结束");
-
 				timer.stop();
 				timer = MyCountDownTimer.getInstance(MASTER_TIME, 1000);
 				mHandler.removeCallbacks(counterRunnable);
@@ -113,8 +106,8 @@ public class MainActivity extends Activity implements OnClickListener {
 				imgStart.setImageDrawable(getResources().getDrawable(
 						R.drawable.selector_start));
 				imgStart.setClickable(true);
-				
-				//清状态
+
+				// 改变状态
 				// instanceMachineStatus();
 				mMachineStatus.setMainPower("01");
 				mMachineStatus.setSlavePower("01");
@@ -122,8 +115,8 @@ public class MainActivity extends Activity implements OnClickListener {
 
 				mBleService.writeCharacteristic(mMachineStatus);
 
-				validateSeekBar();
-				validateModel();
+				updateSeekBarValue();
+				updateModel();
 				return;
 			}
 			mHandler.postDelayed(this, 1000);
@@ -132,92 +125,132 @@ public class MainActivity extends Activity implements OnClickListener {
 
 	private MachineStatus mMachineStatus; // 初始状态
 	private BleService mBleService;
+	BluetoothDevice remoteDevice;
 	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 		@Override
-		public void onReceive(Context context, Intent intent) {
+		public void onReceive(Context context, final Intent intent) {
 			String action = intent.getAction();
 			if (action.equals(BleService.BLE_STATUS_ABNORMAL)) {
 				// 请求打开蓝牙
-				Intent mIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+				Intent mIntent = new Intent(
+						BluetoothAdapter.ACTION_REQUEST_ENABLE);
 				startActivity(mIntent);
-			} else if (action.equals(BleService.BLE_DEVICE_SCANING)) {
-			} else if (action.equals(BleService.BLE_DEVICE_STOP_SCAN)) {
-			} else if (action.equals(BleService.BLE_DEVICE_FOUND)) {
 			} else if (action.equals(BleService.BLE_GATT_CONNECTED)) {
-				validateBluetoothState();
+				Log.e(TAG, "connected...");
 			} else if (action.equals(BleService.BLE_GATT_DISCONNECTED)) {
-				mBleService.close();//连接断开，释放设备。
-				// 断开连接
-				cbFuzaiMain.setChecked(false);
-				cbFuzaiSlave.setChecked(false);
-				validateBluetoothState();
-				instanceMachineStatus();
-				mBleService.writeCharacteristic(mMachineStatus);
-			} else if (action.equals(BleService.BLE_SERVICE_DISCOVERED)) {
-			} else if (action.equals(BleService.BLE_CHARACTERISTIC_READ)) {
-			} else if (action.equals(BleService.BLE_CHARACTERISTIC_NOTIFICATION)) {
-			} else if (action.equals(BleService.BLE_CHARACTERISTIC_WRITE)) {
-			} else if (action.equals(BleService.BLE_CHARACTERISTIC_CHANGED)) {
-				Bundle b = intent.getExtras();
-				byte[] value = b.getByteArray(BleService.EXTRA_VALUE);
-				Log.d(TAG, "CHARACTERISTIC数据变化：" + value);
-				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
-					if (mMachineStatus.getStartStatus().equals("01")) {
-						if (value != null) {
-							String data = DataUtil.getStringByBytes(value);
-							Log.d(TAG, "data:" + data);
-							String mainFuzai = data.substring(16, 18);
-							if (mainFuzai.equals("01")) {
-								// 有负载01
-								cbFuzaiMain.setChecked(true); // 主机负载状态
-							} else if (mainFuzai.equals("00")) {
-								// 无负载00
+				// 蓝牙断开
+				mHandler.post(new Runnable() {
 
-								// 切换为无负载
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						mMachineStatus.setMainPower("01");
+						mMachineStatus.setSlavePower("01");
+						mMachineStatus.setStartStatus("00");
+						// 按摩结束
+						timer.stop();
+						timer = MyCountDownTimer.getInstance(MASTER_TIME, 1000);
+						mHandler.removeCallbacks(counterRunnable);
+						textViewTimer.setText("15:00");
+						imgStart.setImageDrawable(getResources().getDrawable(
+								R.drawable.selector_start));
+						runOnUiThread(new Runnable() {
+							public void run() {
+								imgStart.setClickable(true);
+								// 负载断开
 								cbFuzaiMain.setChecked(false);
-								if (cbModelMain.isChecked()) {
-									// 强度清1
-									seekBarMain.setProgress(1);
-								}
-								// 数据清1
-								mMachineStatus.setMainPower("01");
-								mBleService.writeCharacteristic(mMachineStatus);
-							}
-
-							String slaveFuzai = data.substring(18, 20);
-							if (slaveFuzai.equals("01")) {
-								// 有负载01
-								cbFuzaiSlave.setChecked(true);// 从机负载状态
-							} else if (slaveFuzai.equals("00")) {
-								// 无负载00
 								cbFuzaiSlave.setChecked(false);
-								if (cbModelSlaver.isChecked()) {
-									seekBarSlaver.setProgress(1);
-								}
-								mMachineStatus.setSlavePower("01");
-								mBleService.writeCharacteristic(mMachineStatus);
 							}
-						} else {
-							Log.d(TAG, "没有数据收到");
+						});
+						if (!mBleService.isBackground()) {
+							mBleService.setBackground(false);
+							mBleService.rescanBleDevices();
 						}
-					}else {
-						cbFuzaiSlave.setChecked(false);
-						cbFuzaiMain.setChecked(false);
-						Log.d(TAG, "开始才能检测到负载。");
 					}
-				}
-			} else if (action.equals(BleService.BLE_RSSI_READ)) {
-				Log.d(TAG, "read RSSI");
-				// RSSI读
+				});
+				// 蓝牙状态变为未连接
+				validateBluetoothState(false);
+
+				// 运行参数清零
+				// instanceMachineStatus();
+
+				// 搜索蓝牙？
+
+			} else if (action.equals(BleService.BLE_CHARACTERISTIC_CHANGED)) {
+				mHandler.post(new Runnable() {
+					public void run() {
+						Bundle b = intent.getExtras();
+						byte[] value = b.getByteArray(BleService.EXTRA_VALUE);
+						Log.d(TAG, "CHARACTERISTIC数据变化：" + value);
+//						if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {// 蓝牙连接
+//							if (mMachineStatus.getStartStatus().equals("01")) {// 已开始
+								if (value != null) {
+									String data = DataUtil
+											.getStringByBytes(value);
+									Log.e(TAG, "data:" + data);
+									String mainFuzai = data.substring(16, 18);
+									if (mainFuzai.equals("01")) {
+										// 有负载01
+										cbFuzaiMain.setChecked(true); // 主机负载状态
+									} else if (mainFuzai.equals("00")) {
+										// 无负载00
+
+										// 切换为无负载
+										cbFuzaiMain.setChecked(false);
+										if (cbModelMain.isChecked()) {
+											// 强度清1
+											seekBarMain.setProgress(1);
+										}
+										// 数据清1
+										mMachineStatus.setMainPower("01");
+										mBleService
+												.writeCharacteristic(mMachineStatus);
+									}
+
+									String slaveFuzai = data.substring(18, 20);
+									if (slaveFuzai.equals("01")) {
+										// 有负载01
+										cbFuzaiSlave.setChecked(true);// 从机负载状态
+									} else if (slaveFuzai.equals("00")) {
+										// 无负载00
+										cbFuzaiSlave.setChecked(false);
+										if (cbModelSlaver.isChecked()) {
+											seekBarSlaver.setProgress(1);
+										}
+										mMachineStatus.setSlavePower("01");
+										mBleService
+												.writeCharacteristic(mMachineStatus);
+									}
+//								} else {
+//									Log.d(TAG, "没有数据收到");
+//								}
+//							} else {
+////								cbFuzaiSlave.setChecked(false);
+////								cbFuzaiMain.setChecked(false);
+//								Log.d(TAG, "开始才能检测到负载。");
+//							}
+						}
+					}
+				});
 			} else if (action.equals(BleService.BLE_CHARACTERISTIC_FOUND)) {
 				// 找到write属性
-				Log.d(TAG, "write属性初始完成...");
-				if (mBleService.getConnectState() == 1) {
-					mBleService.writeCharacteristic(mMachineStatus);
-				} else {
-					Log.d(TAG, "还没连接");
-				}
+				Log.e(TAG, "ble_characteristic_found. mMachineStatus : "
+						+ mMachineStatus);
+				// if (mBleService.getConnectState() == 1) {
+
+				mHandler.postDelayed(new Runnable() {
+
+					@Override
+					public void run() {
+						mBleService.writeCharacteristic(mMachineStatus);
+					}
+				}, 2000);
+				// } else {
+				// Log.d(TAG, "还没连接");
+				// }
+				validateBluetoothState(true);
+				updateModel();
+				updateSeekBarValue();
 			}
 		}
 
@@ -226,23 +259,46 @@ public class MainActivity extends Activity implements OnClickListener {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		BleApplication.addActivity(this);
 		setContentView(R.layout.activity_main);
 		instanceMachineStatus();
-		
 		mBleService = ((BleApplication) getApplication()).getBleService();
 		initViews();
-		setListener();
-		validateBluetoothState();
-		validateFuzaiModel();
-		validateSeekBar();
-		validateModel();
+		setListeners();
+		if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
+			validateBluetoothState(true);
+		} else {
+			validateBluetoothState(false);
+		}
+		// validateFuzaiModel();
+		updateSeekBarValue();
+		updateModel();
+		
 	}
 
 	@Override
+	protected void onStart() {
+		super.onStart();
+	}
+
+	
+	
+	@Override
 	protected void onResume() {
 		super.onResume();
+		mBleService.setBackground(false);
+		if (mBleService.getConnectState() != BluetoothGatt.STATE_CONNECTED) {
+			mBleService.rescanBleDevices();
+		}
 		registerReceiver(mBroadcastReceiver, BleService.getIntentFilter());
 		mBleService.writeCharacteristic(mMachineStatus);
+	}
+
+	@Override
+	protected void onPause() {
+		// TODO Auto-generated method stub
+		super.onPause();
+		mBleService.setBackground(true);
 	}
 
 	@Override
@@ -255,18 +311,54 @@ public class MainActivity extends Activity implements OnClickListener {
 		if (backDialog != null) {
 			backDialog.dismiss();
 		}
-		if (mBleService.getConnectState() == 1) {
+		if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 			mBleService.disconnectBleDevice();
 		}
 		unregisterReceiver(mBroadcastReceiver);
+
 		super.onDestroy();
 
 	}
 
-	public void instanceMachineStatus() {
-		String motor = (String) SharedPreferenceUtil.get(getApplicationContext(), "motor", "00");
-		mMachineStatus = new MachineStatus("00", "01", "01", "00", "01", "01",
-				"00", motor);
+	@Override
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.img_massager:
+			mViewPager.setCurrentItem(0);
+			validateBottom(0);
+			break;
+		case R.id.tv_tab_massager:
+
+			mViewPager.setCurrentItem(0);
+			validateBottom(0);
+			break;
+		case R.id.img_setting:
+			mViewPager.setCurrentItem(1);
+			validateBottom(1);
+			break;
+		case R.id.tv_tab_setting:
+			mViewPager.setCurrentItem(1);
+			validateBottom(1);
+			break;
+		case R.id.tv_connect:
+			// Intent connectIntent = new Intent(MainActivity.this,
+			// ConnectActivity.class);
+			// startActivity(connectIntent);
+			finish();
+			break;
+		case R.id.rl_reconnect:
+			if (mBleService != null) {
+				mBleService.disconnectBleDevice();
+			}
+			// Intent reconnectIntent = new Intent(MainActivity.this,
+			// ConnectActivity.class);
+			// startActivity(reconnectIntent);
+			finish();
+			break;
+
+		default:
+			break;
+		}
 	}
 
 	@Override
@@ -277,10 +369,15 @@ public class MainActivity extends Activity implements OnClickListener {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						dialog.dismiss();
-						if (mBleService.getConnectState() == 1) {
+						if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 							mBleService.disconnectBleDevice();
 						}
-						finish();
+						// 退出
+
+//						android.os.Process.killProcess(android.os.Process
+//								.myPid());
+//						System.exit(0);
+						BleApplication.finishActivity();
 					}
 				})
 				.setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -291,6 +388,17 @@ public class MainActivity extends Activity implements OnClickListener {
 				}).create();
 		backDialog.show();
 
+	}
+
+	/**
+	 * 初始化运行状态 000101000101XX 其中电机开关状态在本地存贮获取
+	 * 
+	 */
+	private void instanceMachineStatus() {
+		String motor = (String) SharedPreferenceUtil.get(
+				getApplicationContext(), "motor", "00");
+		mMachineStatus = new MachineStatus("00", "01", "01", "00", "01", "01",
+				"00", motor);
 	}
 
 	private void initViews() {
@@ -432,32 +540,137 @@ public class MainActivity extends Activity implements OnClickListener {
 		});
 	}
 
+	private void setListeners() {
+		// 设置
+		imgSetting.setOnClickListener(this);
+		// 按摩仪
+		imgMaster.setOnClickListener(this);
+		// 连接蓝牙
+		textViewConnect.setOnClickListener(this);
+		// 重连蓝牙
+		rlReconnect.setOnClickListener(this);
+		// 负载模式选择：力度power 频率freq
+		setFuzaiListener();
+		// 主机/从机按摩模式：按摩/针灸/锤击
+		setModelListener();
+		// 加减
+		setMinusListener();
+		// 开始结束
+		setTimerListener();
+		// 电机
+		setMotorListener();
+		setLiPinListener();
+	}
+
 	/**
 	 * 初始蓝牙状态
 	 */
-	private void validateBluetoothState() {
+	private void validateBluetoothState(final boolean enable) {
 		// if (mBleService.isConnected()) {
-		if (mBleService.getConnectState() == 1) {
-			textViewConnectState.setVisibility(View.GONE);
-			textViewConnect.setVisibility(View.GONE);
-			textViewMain.setVisibility(View.VISIBLE);
-			textViewSlave.setVisibility(View.VISIBLE);
-			line.setBackgroundColor(getResources().getColor(R.color.chenghong));
-			
-		
+		runOnUiThread(new Runnable() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				if (enable) {
+					textViewConnectState.setVisibility(View.GONE);
+					textViewConnect.setVisibility(View.GONE);
+					textViewMain.setVisibility(View.VISIBLE);
+					textViewSlave.setVisibility(View.VISIBLE);
+					line.setBackgroundColor(getResources().getColor(
+							R.color.chenghong));
+
+				} else {
+					textViewConnectState.setVisibility(View.VISIBLE);
+					textViewConnect.setVisibility(View.VISIBLE);
+					textViewMain.setVisibility(View.GONE);
+					textViewSlave.setVisibility(View.GONE);
+					line.setBackgroundColor(getResources().getColor(
+							R.color.grey));
+				}
+			}
+		});
+	}
+
+	/**
+	 * 进度条Seekbar
+	 */
+	private void updateSeekBarValue() {
+
+		if (cbModelMain.isChecked()) {
+			// 主机力度
+			Log.d(TAG,
+					"mMachineStatus.getMainPower():"
+							+ mMachineStatus.getMainPower());
+			seekBarMain.setProgress(Integer.valueOf(
+					mMachineStatus.getMainPower(), 16));
 		} else {
-			textViewConnectState.setVisibility(View.VISIBLE);
-			textViewConnect.setVisibility(View.VISIBLE);
-			textViewMain.setVisibility(View.GONE);
-			textViewSlave.setVisibility(View.GONE);
-			line.setBackgroundColor(getResources().getColor(R.color.grey));
+			// 主机频率
+			Log.d(TAG,
+					"mMachineStatus.getMainFreq():"
+							+ mMachineStatus.getMainFreq());
+			seekBarMain.setProgress(Integer.valueOf(
+					mMachineStatus.getMainFreq(), 16));
+		}
+
+		if (cbModelSlaver.isChecked()) {
+			// 从机力度
+			Log.d(TAG,
+					"mMachineStatus.getSlavePower():"
+							+ mMachineStatus.getSlavePower());
+			seekBarSlaver.setProgress(Integer.valueOf(
+					mMachineStatus.getSlavePower(), 16));
+		} else {
+			// 从机频率
+			Log.d(TAG,
+					"mMachineStatus.getSlaveFreq():"
+							+ mMachineStatus.getSlaveFreq());
+			seekBarSlaver.setProgress(Integer.valueOf(
+					mMachineStatus.getSlaveFreq(), 16));
+		}
+
+	}
+
+	/**
+	 * 主机/从机按摩模式
+	 */
+	private void updateModel() {
+		Log.d(TAG, "主机模式:" + Integer.valueOf(mMachineStatus.getMainModel(), 16));
+		// 初始化主机按摩模式
+		switch (Integer.valueOf(mMachineStatus.getMainModel(), 16)) {
+		case 0:
+			radioGroupMain.check(R.id.rb_main_master);
+			break;
+		case 1:
+			radioGroupMain.check(R.id.rb_main_acup);
+			break;
+		case 2:
+			radioGroupMain.check(R.id.rb_main_hammer);
+			break;
+		default:
+			break;
+		}
+
+		// 初始化从机按摩模式
+		switch (Integer.valueOf(mMachineStatus.getSlaveModel(), 16)) {
+		case 0:
+			radioGroupSlaver.check(R.id.rb_slave_master);
+			break;
+		case 1:
+			radioGroupSlaver.check(R.id.rb_slave_acup);
+			break;
+		case 2:
+			radioGroupSlaver.check(R.id.rb_slave_hammer);
+			break;
+		default:
+			break;
 		}
 	}
 
 	/**
-	 * 主机/从机 负载模式
+	 * 主机/从机 负载模式 力度/频率
 	 */
-	public void validateFuzaiModel() {
+	private void setLiPinListener() {
 
 		cbModelMain.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
@@ -513,7 +726,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	/**
 	 * 主机/从机 负载状态
 	 */
-	public void fuzaiListener() {
+	private void setFuzaiListener() {
 
 		cbFuzaiMain.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
@@ -549,46 +762,7 @@ public class MainActivity extends Activity implements OnClickListener {
 		// cbFuzaiSlave.setChecked(false);
 	}
 
-	/**
-	 * 进度条Seekbar
-	 */
-	private void validateSeekBar() {
-
-		if (cbModelMain.isChecked()) {
-			// 主机力度
-			Log.d(TAG,
-					"mMachineStatus.getMainPower():"
-							+ mMachineStatus.getMainPower());
-			seekBarMain.setProgress(Integer.valueOf(
-					mMachineStatus.getMainPower(), 16));
-		} else {
-			// 主机频率
-			Log.d(TAG,
-					"mMachineStatus.getMainFreq():"
-							+ mMachineStatus.getMainFreq());
-			seekBarMain.setProgress(Integer.valueOf(
-					mMachineStatus.getMainFreq(), 16));
-		}
-
-		if (cbModelSlaver.isChecked()) {
-			// 从机力度
-			Log.d(TAG,
-					"mMachineStatus.getSlavePower():"
-							+ mMachineStatus.getSlavePower());
-			seekBarSlaver.setProgress(Integer.valueOf(
-					mMachineStatus.getSlavePower(), 16));
-		} else {
-			// 从机频率
-			Log.d(TAG,
-					"mMachineStatus.getSlaveFreq():"
-							+ mMachineStatus.getSlaveFreq());
-			seekBarSlaver.setProgress(Integer.valueOf(
-					mMachineStatus.getSlaveFreq(), 16));
-		}
-
-	}
-
-	public void modelListener() {
+	private void setModelListener() {
 
 		// 主机按摩模式 按摩/针灸/锤击
 		radioGroupMain
@@ -637,19 +811,20 @@ public class MainActivity extends Activity implements OnClickListener {
 							break;
 						}
 						// if(mBleService.isConnected()){
-						if (mBleService.getConnectState() == 1) {
-							if(mMachineStatus.getStartStatus().equals("01")){
-								if(cbFuzaiMain.isChecked()){
+						if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
+							if (mMachineStatus.getStartStatus().equals("01")) {
+								if (cbFuzaiMain.isChecked()) {
 									if (mBleService != null) {
-										mBleService.writeCharacteristic(mMachineStatus);
+										mBleService
+												.writeCharacteristic(mMachineStatus);
 									}
-								}else {
+								} else {
 									Log.d(TAG, "负载了才能同步数据");
 								}
-							}else {
+							} else {
 								Log.d(TAG, "请按开始键才能同步数据");
 							}
-						
+
 						}
 					}
 				});
@@ -699,75 +874,40 @@ public class MainActivity extends Activity implements OnClickListener {
 							break;
 						}
 						// if(mBleService.isConnected()){
-//						if (mBleService.getConnectState() == 1) {
-//							if (mBleService != null) {
-//								mBleService.writeCharacteristic(mMachineStatus);
-//							}
-//						}
-						if (mBleService.getConnectState() == 1) {
-							if(mMachineStatus.getStartStatus().equals("01")){
-								if(cbFuzaiSlave.isChecked()){
+						// if (mBleService.getConnectState() == 1) {
+						// if (mBleService != null) {
+						// mBleService.writeCharacteristic(mMachineStatus);
+						// }
+						// }
+						if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
+							if (mMachineStatus.getStartStatus().equals("01")) {
+								if (cbFuzaiSlave.isChecked()) {
 									if (mBleService != null) {
-										mBleService.writeCharacteristic(mMachineStatus);
+										mBleService
+												.writeCharacteristic(mMachineStatus);
 									}
-								}else {
+								} else {
 									Log.d(TAG, "负载了才能同步数据");
 								}
-							}else {
+							} else {
 								Log.d(TAG, "请按开始键才能同步数据");
 							}
-						
+
 						}
 					}
 				});
 	}
 
 	/**
-	 * 主机/从机按摩模式
-	 */
-	public void validateModel() {
-		Log.d(TAG, "主机模式:" + Integer.valueOf(mMachineStatus.getMainModel(), 16));
-		// 初始化主机按摩模式
-		switch (Integer.valueOf(mMachineStatus.getMainModel(), 16)) {
-		case 0:
-			radioGroupMain.check(R.id.rb_main_master);
-			break;
-		case 1:
-			radioGroupMain.check(R.id.rb_main_acup);
-			break;
-		case 2:
-			radioGroupMain.check(R.id.rb_main_hammer);
-			break;
-		default:
-			break;
-		}
-
-		// 初始化从机按摩模式
-		switch (Integer.valueOf(mMachineStatus.getSlaveModel(), 16)) {
-		case 0:
-			radioGroupSlaver.check(R.id.rb_slave_master);
-			break;
-		case 1:
-			radioGroupSlaver.check(R.id.rb_slave_acup);
-			break;
-		case 2:
-			radioGroupSlaver.check(R.id.rb_slave_hammer);
-			break;
-		default:
-			break;
-		}
-	}
-
-	/**
 	 * 加减
 	 */
-	private void addMinusListener() {
+	private void setMinusListener() {
 
 		imgMainAdd.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 					String start = mMachineStatus.getStartStatus(); // 只有开始才能加减
 					if (start.equals("01")) {
 						if (cbFuzaiMain.isChecked()) { // 有负载才能加减
@@ -803,7 +943,8 @@ public class MainActivity extends Activity implements OnClickListener {
 					}
 
 				} else {
-					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+					Toast.makeText(getApplicationContext(), "请连接蓝牙",
+							Toast.LENGTH_SHORT).show();
 				}
 
 			}
@@ -813,13 +954,13 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 					String start = mMachineStatus.getStartStatus();
 					if (start.equals("01")) {
 						if (cbFuzaiMain.isChecked()) { // 有负载才能加减
 							int mainCurrentProgress = seekBarMain.getProgress() - 1;
-							if (mainCurrentProgress <= 0) {
-								mainCurrentProgress = 0;
+							if (mainCurrentProgress <= 1) {
+								mainCurrentProgress = 1;
 							}
 							seekBarMain.setProgress(mainCurrentProgress);
 							if (cbModelMain.isChecked()) {// 当负载为power时
@@ -840,7 +981,8 @@ public class MainActivity extends Activity implements OnClickListener {
 						Log.d(TAG, "请按开始增减 强度/频率");
 					}
 				} else {
-					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+					Toast.makeText(getApplicationContext(), "请连接蓝牙",
+							Toast.LENGTH_SHORT).show();
 				}
 			}
 		});
@@ -849,7 +991,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 
 					String start = mMachineStatus.getStartStatus(); // 只有开始才能加减
 					if (start.equals("01")) {
@@ -885,7 +1027,8 @@ public class MainActivity extends Activity implements OnClickListener {
 					}
 
 				} else {
-					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+					Toast.makeText(getApplicationContext(), "请连接蓝牙",
+							Toast.LENGTH_SHORT).show();
 				}
 			}
 		});
@@ -894,15 +1037,15 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 
 					String start = mMachineStatus.getStartStatus(); // 只有开始才能加减
 					if (start.equals("01")) {
 						if (cbFuzaiSlave.isChecked()) {// 从机是否负载
 							int slaveCurrentProgress = seekBarSlaver
 									.getProgress() - 1;
-							if (slaveCurrentProgress <= 0) {
-								slaveCurrentProgress = 0;
+							if (slaveCurrentProgress <= 1) {
+								slaveCurrentProgress = 1;
 							}
 							seekBarSlaver.setProgress(slaveCurrentProgress);
 							if (cbModelSlaver.isChecked()) {// 当负载为power时
@@ -922,7 +1065,8 @@ public class MainActivity extends Activity implements OnClickListener {
 					}
 
 				} else {
-					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+					Toast.makeText(getApplicationContext(), "请连接蓝牙",
+							Toast.LENGTH_SHORT).show();
 				}
 
 			}
@@ -932,7 +1076,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	/**
 	 * 计时
 	 */
-	private void timerListener() {
+	private void setTimerListener() {
 		timer = MyCountDownTimer.getInstance(MASTER_TIME, 1000);
 		String timeStr = DataUtil.getMMSS(timer.getCurrentTime());
 		textViewTimer.setText(timeStr);
@@ -943,7 +1087,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 					imgStart.setImageDrawable(getResources().getDrawable(
 							R.drawable.ic_start_pressed));
 					mMachineStatus.setStartStatus("01");
@@ -953,7 +1097,8 @@ public class MainActivity extends Activity implements OnClickListener {
 					timer.start();
 					mHandler.postDelayed(counterRunnable, 1000);
 				} else {
-					Toast.makeText(getApplicationContext(), "请连接蓝牙", 0).show();
+					Toast.makeText(getApplicationContext(), "请连接蓝牙",
+							Toast.LENGTH_SHORT).show();
 				}
 			}
 		});
@@ -962,7 +1107,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View v) {
 				// if (mBleService.isConnected()) {
-				if (mBleService.getConnectState() == 1) {
+//				if (mBleService.getConnectState() == BluetoothGatt.STATE_CONNECTED) {
 					timer.stop();
 					timer = MyCountDownTimer.getInstance(MASTER_TIME, 1000);
 					mHandler.removeCallbacks(counterRunnable);
@@ -981,11 +1126,11 @@ public class MainActivity extends Activity implements OnClickListener {
 
 					Log.d(TAG, mMachineStatus.toString());
 					mBleService.writeCharacteristic(mMachineStatus);
-					validateSeekBar();
-					validateModel();
-				} else {
-					Log.d(TAG, "已断开连接");
-				}
+					updateSeekBarValue();
+					updateModel();
+//				} else {
+//					Log.d(TAG, "已断开连接");
+//				}
 			}
 		});
 	}
@@ -993,7 +1138,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	/**
 	 * 电机开关
 	 */
-	private void motorListener() {
+	private void setMotorListener() {
 		checkBoxMotor.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView,
@@ -1001,96 +1146,33 @@ public class MainActivity extends Activity implements OnClickListener {
 				if (isChecked) {
 					checkBoxMotor.setButtonDrawable(R.drawable.ic_switch_on);
 					mMachineStatus.setMotorStatus("01");
-					SharedPreferenceUtil.put(getApplicationContext(), "motor",
-							"01");
-					Log.d(TAG, "开关电机：开！ " + mMachineStatus.toString());
+					// SharedPreferenceUtil.put(getApplicationContext(),
+					// "motor","01");
 					// if (mBleService.isConnected()) {
-					if (mBleService.getConnectState() == 1) {
-						mBleService.writeCharacteristic(mMachineStatus);
-					} else {
-						Log.d(TAG, "开关电机：网络已断开！");
-					}
+					// if (mBleService.getConnectState() == 1) {
+					mBleService.writeCharacteristic(mMachineStatus);
+					// } else {
+					// Log.d(TAG, "开关电机：网络已断开！");
+					// }
 				} else {
 					checkBoxMotor.setButtonDrawable(R.drawable.ic_switch_off);
 					mMachineStatus.setMotorStatus("00");
-					SharedPreferenceUtil.put(getApplicationContext(), "motor",
-							"00");
-					Log.d(TAG, "开关电机：关！ " + mMachineStatus.toString());
+					// SharedPreferenceUtil.put(getApplicationContext(),
+					// "motor","00");
 					// if (mBleService.isConnected()) {
-					if (mBleService.getConnectState() == 1) {
-						mBleService.writeCharacteristic(mMachineStatus);
-					} else {
-						Log.d(TAG, "开关电机：网络已断开！");
-					}
+					// if (mBleService.getConnectState() == 1) {
+					mBleService.writeCharacteristic(mMachineStatus);
+					// } else {
+					// Log.d(TAG, "开关电机：网络已断开！");
+					// }
 				}
+				Log.d(TAG, "checkbox" + isChecked);
 
 			}
 		});
 	}
 
-	private void setListener() {
-		// 设置
-		imgSetting.setOnClickListener(this);
-		// 按摩仪
-		imgMaster.setOnClickListener(this);
-		// 连接蓝牙
-		textViewConnect.setOnClickListener(this);
-		// 重连蓝牙
-		rlReconnect.setOnClickListener(this);
-		// 负载模式选择：力度power 频率freq
-		fuzaiListener();
-		// 主机/从机按摩模式：按摩/针灸/锤击
-		modelListener();
-		// 加减
-		addMinusListener();
-		// 开始结束
-		timerListener();
-		// 电机
-		motorListener();
-	}
-
-	@Override
-	public void onClick(View v) {
-		switch (v.getId()) {
-		case R.id.img_massager:
-			mViewPager.setCurrentItem(0);
-			validateBottom(0);
-			break;
-		case R.id.tv_tab_massager:
-
-			mViewPager.setCurrentItem(0);
-			validateBottom(0);
-			break;
-		case R.id.img_setting:
-			mViewPager.setCurrentItem(1);
-			validateBottom(1);
-			break;
-		case R.id.tv_tab_setting:
-			mViewPager.setCurrentItem(1);
-			validateBottom(1);
-			break;
-		case R.id.tv_connect:
-			Intent connectIntent = new Intent(MainActivity.this,
-					ConnectActivity.class);
-			startActivity(connectIntent);
-			finish();
-			break;
-		case R.id.rl_reconnect:
-			if (mBleService != null) {
-				mBleService.disconnectBleDevice();
-			}
-			Intent reconnectIntent = new Intent(MainActivity.this,
-					ConnectActivity.class);
-			startActivity(reconnectIntent);
-			finish();
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	public void validateBottom(int flag) {
+	private void validateBottom(int flag) {
 		switch (flag) {
 		case 0:
 			tvMaster.setTextColor(getResources().getColor(R.color.green_1));
@@ -1109,5 +1191,9 @@ public class MainActivity extends Activity implements OnClickListener {
 			break;
 		}
 	}
+
+	/**
+	 * 蓝牙断线
+	 */
 
 }
